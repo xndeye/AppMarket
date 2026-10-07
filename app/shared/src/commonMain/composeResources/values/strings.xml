@@ -2,7 +2,7 @@
     <string name="app_name">App Store</string>
 
     <!-- Navigation -->
-    <string name="nav_today">Today</string>
+    <string name="nav_today">Recommended</string>
     <string name="nav_updates">Updates</string>
     <string name="nav_search">Search</string>
     <string name="nav_settings">Settings</string>
@@ -105,10 +105,10 @@
     <string name="search_sources_summary">Default source for search and app details; switchable on the results page</string>
     <string name="update_source">Update source</string>
     <string name="update_source_summary">Used to check for app updates</string>
-    <string name="today_source">Today source</string>
-    <string name="today_source_summary">Used for Today page content</string>
-    <string name="source_xiaomi">Xiaomi</string>
-    <string name="source_vivo">vivo</string>
+    <string name="today_source">Recommended source</string>
+    <string name="today_source_summary">Used for Recommended page content</string>
+    <string name="source_xiaomi">小米</string>
+    <string name="source_vivo">VIVO</string>
     <string name="source_wandoujia">Wandoujia</string>
     <string name="source_oppo">OPPO</string>
     <string name="source_samsung">Samsung</string>

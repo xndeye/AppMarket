@@ -5,7 +5,7 @@
     <string name="nav_updates">更新</string>
     <string name="nav_search">搜索</string>
     <string name="nav_settings">设置</string>
-    <string name="nav_today">今日</string>
+    <string name="nav_today">推荐</string>
 
     <!-- Common -->
     <string name="back">返回</string>
@@ -106,10 +106,10 @@
     <string name="search_sources_summary">搜索和应用详情的默认来源，可在结果页切换</string>
     <string name="update_source">更新来源</string>
     <string name="update_source_summary">用于检查应用更新</string>
-    <string name="today_source">今日来源</string>
-    <string name="today_source_summary">用于今日页的内容</string>
-    <string name="source_xiaomi">Xiaomi</string>
-    <string name="source_vivo">vivo</string>
+    <string name="today_source">推荐来源</string>
+    <string name="today_source_summary">用于推荐页的内容</string>
+    <string name="source_xiaomi">小米</string>
+    <string name="source_vivo">VIVO</string>
     <string name="source_wandoujia">豌豆荚</string>
     <string name="source_oppo">OPPO</string>
     <string name="source_samsung">三星</string>
