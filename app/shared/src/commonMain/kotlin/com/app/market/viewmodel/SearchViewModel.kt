@@ -63,7 +63,7 @@ class SearchViewModel(
     private val uiPlatform: UiPlatform,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(SearchUiState())
+    private val _uiState = MutableStateFlow(SearchUiState(sources = updatePrefs.searchSources.value))
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
 
     val downloadStates: StateFlow<Map<String, DownloadState>> = downloads.states
@@ -149,6 +149,11 @@ class SearchViewModel(
 
     fun selectHistory(keyword: String?) = _uiState.update { it.copy(selectedHistory = keyword) }
 
+    fun selectSource(source: AppSource) {
+        if (_uiState.value.sources == setOf(source)) return
+        viewModelScope.launch { updatePrefs.setSearchSources(setOf(source)) }
+    }
+
     fun searchWith(keyword: String) {
         _uiState.update { it.copy(keyword = keyword) }
         runSearch()
@@ -175,7 +180,7 @@ class SearchViewModel(
                 errorMessage = "",
                 showNoResults = false,
                 results = if (keepResults) it.results else emptyList(),
-                activeKeyword = if (keepResults) it.activeKeyword else "",
+                activeKeyword = keyword,
                 paging = if (keepResults) it.paging else emptyMap(),
             )
         }

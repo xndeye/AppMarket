@@ -102,7 +102,7 @@
     <string name="search_ad_tag">Promoted</string>
     <string name="search_quickapp_tag">Quick app</string>
     <string name="search_sources">Search sources</string>
-    <string name="search_sources_summary">Used for search and app details</string>
+    <string name="search_sources_summary">Default source for search and app details; switchable on the results page</string>
     <string name="update_source">Update source</string>
     <string name="update_source_summary">Used to check for app updates</string>
     <string name="today_source">Today source</string>

@@ -32,7 +32,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -44,18 +43,13 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.offset
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigationevent.NavigationEventInfo
-import androidx.navigationevent.compose.NavigationBackHandler
-import androidx.navigationevent.compose.rememberNavigationEventState
 import com.app.market.domain.model.download.DownloadState
+import com.app.market.domain.model.market.AppSource
 import com.app.market.domain.model.market.MarketAppInfo
 import com.app.market.resources.Res
 import com.app.market.resources.cancel
@@ -67,42 +61,38 @@ import com.app.market.resources.reserve
 import com.app.market.resources.search_hint
 import com.app.market.resources.search_history
 import com.app.market.resources.update
-import com.app.market.ui.component.AdaptiveTopAppBar
 import com.app.market.ui.component.AppRow
 import com.app.market.ui.component.LoadingBox
+import com.app.market.ui.component.MarketScaffold
 import com.app.market.ui.component.PageVerticalPadding
-import com.app.market.ui.component.blur.BlurredBar
-import com.app.market.ui.component.blur.rememberBlurBackdrop
+import com.app.market.ui.component.deferredTopPadding
 import com.app.market.ui.model.AppActionKind
+import com.app.market.ui.util.appSourceLabel
 import com.app.market.ui.util.installActionText
-import com.app.market.ui.util.rememberIsWideScreen
 import com.app.market.viewmodel.SearchUiState
 import com.app.market.viewmodel.SearchViewModel
 import kotlinx.coroutines.flow.distinctUntilChanged
 import org.jetbrains.compose.resources.stringResource
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.InputField
-import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
+import top.yukonga.miuix.kmp.basic.TabRow
+import top.yukonga.miuix.kmp.basic.TabRowDefaults
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.squircle.squircleSurface
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
-import kotlin.math.roundToInt
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
-fun SearchTab(
+fun SearchScreen(
     viewModel: SearchViewModel,
-    bottomPadding: Dp,
+    initialKeyword: String?,
     onOpenDetail: (MarketAppInfo) -> Unit,
-    isCurrentPage: Boolean = true,
-    focusRequestId: Int = 0,
+    onBack: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val downloadStates = viewModel.downloadStates.collectAsStateWithLifecycle()
@@ -124,37 +114,12 @@ fun SearchTab(
         if (state.searchEpoch > 0) listState.scrollToItem(0)
     }
 
-    val scrollBehavior = MiuixScrollBehavior()
-    val isWideScreen = rememberIsWideScreen()
-    // 大标题折叠时把搜索框上方 12dp 收到 0；宽屏顶栏不折叠，恒为 0
-    val collapsingTopPadding = Modifier.collapsingTopPadding(
-        max = if (isWideScreen) 0.dp else 12.dp,
-        fraction = { scrollBehavior.state.collapsedFraction },
-    )
     var searchExpanded by remember { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
-    var handledFocusRequestId by remember { mutableIntStateOf(focusRequestId) }
-
-    LaunchedEffect(focusRequestId) {
-        if (isCurrentPage && focusRequestId != handledFocusRequestId) {
-            handledFocusRequestId = focusRequestId
-            searchExpanded = true
-            // Let InputField apply its expanded state before requesting focus. This is required by
-            // its Android 8 focus workaround, which temporarily disables the collapsed text field.
-            withFrameNanos { }
-            focusRequester.requestFocus()
-            keyboardController?.show()
-        }
-    }
-
-    // A search is "active" when the field is actually focused or a keyword is present (e.g. searched
-    // via a history chip, which does not focus the field). Using the real focus state (not the
-    // sticky `searchExpanded`, which only flips true on focus gain) keeps the cancel button and the
-    // Back gating from sticking after focus is lost.
     val searchActive = isFocused || state.keyword.isNotEmpty()
     val dismissSearchInput: () -> Unit = {
         focusManager.clearFocus()
@@ -166,75 +131,83 @@ fun SearchTab(
         dismissSearchInput()
     }
 
-    // While a search is active, Back clears it first (taking priority over the pager's
-    // back-to-home handler); only once there is no active search does Back fall through.
-    val backState = rememberNavigationEventState(NavigationEventInfo.None)
-    NavigationBackHandler(
-        state = backState,
-        isBackEnabled = isCurrentPage && searchActive,
-        onBackCompleted = cancelSearch,
-    )
+    LaunchedEffect(initialKeyword) {
+        val keyword = initialKeyword?.trim().orEmpty()
+        if (keyword.isNotEmpty()) {
+            viewModel.searchWith(keyword)
+            dismissSearchInput()
+        } else {
+            searchExpanded = true
+            // InputField 展开后再请求焦点，兼容其 Android 8 焦点处理
+            withFrameNanos { }
+            focusRequester.requestFocus()
+            keyboardController?.show()
+        }
+    }
 
-    val backdrop = rememberBlurBackdrop()
-    val blurActive = backdrop != null
-    val barColor = if (blurActive) Color.Transparent else MiuixTheme.colorScheme.surface
-
-    Scaffold(
-        topBar = {
-            BlurredBar(backdrop = backdrop, blurActive = blurActive) {
-                AdaptiveTopAppBar(
-                    title = stringResource(Res.string.nav_search),
-                    color = barColor,
-                    scrollBehavior = scrollBehavior,
-                    bottomContent = {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            InputField(
-                                query = state.keyword,
-                                onQueryChange = viewModel::setKeyword,
-                                onSearch = {
-                                    viewModel.runSearch()
-                                    dismissSearchInput()
-                                },
-                                expanded = searchExpanded,
-                                onExpandedChange = { searchExpanded = it },
-                                label = stringResource(Res.string.search_hint),
-                                interactionSource = interactionSource,
-                                modifier = Modifier
-                                    .focusRequester(focusRequester)
-                                    .weight(1f)
-                                    .padding(horizontal = 12.dp)
-                                    .padding(bottom = 6.dp).then(collapsingTopPadding),
-                            )
-                            AnimatedVisibility(
-                                visible = searchActive,
-                                enter = expandHorizontally() + fadeIn(),
-                                exit = shrinkHorizontally() + fadeOut(),
-                            ) {
-                                Text(
-                                    text = stringResource(Res.string.cancel),
-                                    fontWeight = FontWeight.Bold,
-                                    color = MiuixTheme.colorScheme.primary,
-                                    modifier = Modifier
-                                        .padding(start = 4.dp, end = 16.dp)
-                                        .padding(bottom = 6.dp).then(collapsingTopPadding)
-                                        .clickable(interactionSource = null, indication = null, onClick = cancelSearch),
-                                )
-                            }
-                        }
-                    },
+    MarketScaffold(
+        title = stringResource(Res.string.nav_search),
+        onBack = onBack,
+        bottomContent = { scrollBehavior ->
+            val dynamicTopPadding = remember(scrollBehavior) {
+                { PageVerticalPadding * (1f - scrollBehavior.state.collapsedFraction) }
+            }
+            Column(modifier = Modifier.deferredTopPadding(dynamicTopPadding)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    InputField(
+                        query = state.keyword,
+                        onQueryChange = viewModel::setKeyword,
+                        onSearch = {
+                            viewModel.runSearch()
+                            dismissSearchInput()
+                        },
+                        expanded = searchExpanded,
+                        onExpandedChange = { searchExpanded = it },
+                        label = stringResource(Res.string.search_hint),
+                        interactionSource = interactionSource,
+                        modifier = Modifier
+                            .focusRequester(focusRequester)
+                            .weight(1f)
+                            .padding(start = 12.dp, end = 12.dp, bottom = 6.dp),
+                    )
+                    AnimatedVisibility(
+                        visible = searchActive,
+                        enter = expandHorizontally() + fadeIn(),
+                        exit = shrinkHorizontally() + fadeOut(),
+                    ) {
+                        Text(
+                            text = stringResource(Res.string.cancel),
+                            fontWeight = FontWeight.Bold,
+                            color = MiuixTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .padding(start = 4.dp, end = 16.dp, bottom = 6.dp)
+                                .clickable(interactionSource = null, indication = null, onClick = cancelSearch),
+                        )
+                    }
+                }
+                val sourceOptions = AppSource.entries
+                val selectedSource = state.sources.firstOrNull() ?: AppSource.Default.first()
+                TabRow(
+                    tabs = sourceOptions.map { appSourceLabel(it) },
+                    selectedTabIndex = sourceOptions.indexOf(selectedSource).coerceAtLeast(0),
+                    onTabSelected = { viewModel.selectSource(sourceOptions[it]) },
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    colors = TabRowDefaults.tabRowColors(backgroundColor = Color.Transparent),
+                    minWidth = 88.dp,
+                    maxWidth = 116.dp,
+                    height = 40.dp,
                 )
             }
         },
-    ) { innerPadding ->
-        val backdropModifier = if (backdrop != null) Modifier.layerBackdrop(backdrop) else Modifier
+    ) { innerPadding, backdropModifier, scrollBehavior ->
         val contentPadding = PaddingValues(
             start = 12.dp,
             end = 12.dp,
             top = innerPadding.calculateTopPadding() + PageVerticalPadding,
-            bottom = bottomPadding + PageVerticalPadding,
+            bottom = innerPadding.calculateBottomPadding() + PageVerticalPadding,
         )
         Box(Modifier.fillMaxHeight()) {
             Crossfade(
@@ -263,16 +236,6 @@ fun SearchTab(
                 }
             }
         }
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
-/** 顶部留白按 [fraction] 从 [max] 收到 0，在布局阶段求值，组合不订阅折叠进度。 */
-private fun Modifier.collapsingTopPadding(max: Dp, fraction: () -> Float): Modifier = layout { measurable, constraints ->
-    val extra = (max.toPx() * (1f - fraction())).roundToInt().coerceAtLeast(0)
-    val placeable = measurable.measure(constraints.offset(vertical = -extra))
-    layout(placeable.width, placeable.height + extra) {
-        placeable.place(0, extra)
     }
 }
 

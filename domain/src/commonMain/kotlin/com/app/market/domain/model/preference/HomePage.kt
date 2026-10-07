@@ -4,6 +4,7 @@ package com.app.market.domain.model.preference
 enum class HomePage(val token: String) {
     TODAY("today"),
     UPDATES("updates"),
+    /** 仅兼容旧版本持久化值，当前导航将其映射到 [TODAY]。 */
     SEARCH("search");
 
     companion object {

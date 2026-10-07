@@ -103,7 +103,7 @@
     <string name="search_ad_tag">推广</string>
     <string name="search_quickapp_tag">快应用</string>
     <string name="search_sources">搜索来源</string>
-    <string name="search_sources_summary">用于搜索和应用详情</string>
+    <string name="search_sources_summary">搜索和应用详情的默认来源，可在结果页切换</string>
     <string name="update_source">更新来源</string>
     <string name="update_source_summary">用于检查应用更新</string>
     <string name="today_source">今日来源</string>

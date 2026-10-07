@@ -3,10 +3,7 @@ package com.app.market.ui.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.LayoutDirection
@@ -21,6 +18,7 @@ import com.app.market.ui.screen.IgnoredAppsScreen
 import com.app.market.ui.screen.InstallerSettingsScreen
 import com.app.market.ui.screen.ManualUpdateScreen
 import com.app.market.ui.screen.SavedPackagesScreen
+import com.app.market.ui.screen.SearchScreen
 import com.app.market.ui.screen.ThemeSettingsScreen
 import com.app.market.ui.screen.TodayArticleScreen
 import com.app.market.ui.screen.UpdateHistoryScreen
@@ -56,8 +54,6 @@ fun AppNavigation(
 ) {
     val backStack = rememberNavBackStack<Route>(Route.Main)
     val navigator = remember { Navigator(backStack) }
-    var pendingSearchKeyword by remember { mutableStateOf<String?>(null) }
-
     val updatesViewModel = koinViewModel<UpdatesViewModel>()
     val searchViewModel = koinViewModel<SearchViewModel>()
     val installerSettingsViewModel = koinViewModel<InstallerSettingsViewModel>()
@@ -84,11 +80,11 @@ fun AppNavigation(
         onExternalDetailConsumed(packageName)
     }
 
-    // 外部搜索链接：先回主页面，再交由主页面切页执行
+    // 外部搜索链接始终从主页面打开独立搜索页
     LaunchedEffect(externalSearchKeyword) {
         val keyword = externalSearchKeyword ?: return@LaunchedEffect
         navigator.popUntil { it is Route.Main }
-        pendingSearchKeyword = keyword
+        navigator.push(Route.Search(keyword))
         onExternalSearchConsumed(keyword)
     }
 
@@ -114,11 +110,25 @@ fun AppNavigation(
                 MainPage(
                     navigator = navigator,
                     updatesViewModel = updatesViewModel,
-                    searchViewModel = searchViewModel,
                     installerSettingsViewModel = installerSettingsViewModel,
                     todayViewModel = todayViewModel,
-                    pendingSearchKeyword = pendingSearchKeyword,
-                    onPendingSearchConsumed = { pendingSearchKeyword = null },
+                )
+            }
+            entry<Route.Search>(swipeDismiss = swipeBackDirection) { route ->
+                SearchScreen(
+                    viewModel = searchViewModel,
+                    initialKeyword = route.keyword,
+                    onOpenDetail = {
+                        navigator.push(
+                            Route.AppDetail(
+                                it.appId,
+                                it.packageName,
+                                it.displayName,
+                                source = it.source,
+                            )
+                        )
+                    },
+                    onBack = { navigator.pop() },
                 )
             }
             entry<Route.AppDetail>(swipeDismiss = swipeBackDirection) { route ->

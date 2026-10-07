@@ -50,7 +50,6 @@ import com.app.market.domain.model.preference.HomePage
 import com.app.market.domain.repository.ThemePreferencesRepository
 import com.app.market.platform.UiPlatform
 import com.app.market.resources.Res
-import com.app.market.resources.nav_search
 import com.app.market.resources.nav_settings
 import com.app.market.resources.nav_today
 import com.app.market.resources.nav_updates
@@ -58,7 +57,6 @@ import com.app.market.ui.component.FloatingBottomBar
 import com.app.market.ui.component.FloatingBottomBarItem
 import com.app.market.ui.component.blur.BlurredBar
 import com.app.market.ui.component.blur.rememberBlurBackdrop
-import com.app.market.ui.screen.SearchTab
 import com.app.market.ui.screen.SettingsTab
 import com.app.market.ui.screen.TodayTab
 import com.app.market.ui.screen.UpdatesTab
@@ -67,7 +65,6 @@ import com.app.market.ui.theme.LocalEnableFloatingBottomBarBlur
 import com.app.market.ui.theme.LocalEnableNavigationBadge
 import com.app.market.ui.util.rememberIsWideScreen
 import com.app.market.viewmodel.InstallerSettingsViewModel
-import com.app.market.viewmodel.SearchViewModel
 import com.app.market.viewmodel.TodayViewModel
 import com.app.market.viewmodel.UpdatesViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -91,24 +88,20 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Create
-import top.yukonga.miuix.kmp.icon.extended.Search
 import top.yukonga.miuix.kmp.icon.extended.Settings
 import top.yukonga.miuix.kmp.icon.extended.Update
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import kotlin.math.abs
 
 // 主页签集合按平台能力裁剪：桌面端（无法扫描已装应用 / 安装）不含「更新」。
-private enum class MainTab { Today, Updates, Search, Settings }
+private enum class MainTab { Today, Updates, Settings }
 
 @Composable
 fun MainPage(
     navigator: Navigator,
     updatesViewModel: UpdatesViewModel,
-    searchViewModel: SearchViewModel,
     installerSettingsViewModel: InstallerSettingsViewModel,
     todayViewModel: TodayViewModel,
-    pendingSearchKeyword: String? = null,
-    onPendingSearchConsumed: () -> Unit = {},
 ) {
     val uiPlatform = koinInject<UiPlatform>()
     val themePreferences = koinInject<ThemePreferencesRepository>()
@@ -121,11 +114,9 @@ fun MainPage(
         buildList {
             add(MainTab.Today)
             if (appManagementSupported) add(MainTab.Updates)
-            add(MainTab.Search)
             add(MainTab.Settings)
         }
     }
-    val searchPage = tabs.indexOf(MainTab.Search)
     fun homeIndexOf(page: HomePage): Int =
         tabs.indexOf(page.toTab()).takeIf { it >= 0 } ?: 0
 
@@ -139,29 +130,12 @@ fun MainPage(
     val selectedPage = mainPagerState.selectedPage
     val isWideScreen = rememberIsWideScreen()
     var notificationPermissionRequested by remember { mutableStateOf(false) }
-    var searchFocusRequestId by remember { mutableIntStateOf(0) }
-    val onSearchTabClick = {
-        if (selectedPage == searchPage && !mainPagerState.isNavigating) {
-            searchFocusRequestId += 1
-        } else {
-            mainPagerState.animateToPage(searchPage)
-        }
-    }
-    val onTabClick: (Int, MainTab) -> Unit = { index, tab ->
-        if (tab == MainTab.Search) onSearchTabClick() else mainPagerState.animateToPage(index)
-    }
+    val onTabClick: (Int) -> Unit = mainPagerState::animateToPage
     val startInitialCheckAfterAppListPermission = {
         val launched = uiPlatform.requestInstalledAppsPermission {
             updatesViewModel.startInitialCheck()
         }
         if (!launched) updatesViewModel.startInitialCheck()
-    }
-
-    LaunchedEffect(pendingSearchKeyword) {
-        val keyword = pendingSearchKeyword ?: return@LaunchedEffect
-        mainPagerState.animateToPage(searchPage)
-        if (keyword.isNotEmpty()) searchViewModel.searchWith(keyword) else searchFocusRequestId += 1
-        onPendingSearchConsumed()
     }
 
     // Keep selectedPage (nav-bar highlight + per-tab gating) in sync when the user swipes the pager,
@@ -184,7 +158,6 @@ fun MainPage(
     MainScreenBackHandler(mainPagerState, navigator, homeIndexOf(homePage))
 
     val openDetail: (MarketAppInfo) -> Unit = { app ->
-        // 搜索页可能给出 vivo 条目，详情要打对应源的接口
         navigator.push(Route.AppDetail(app.appId, app.packageName, app.displayName, source = app.source))
     }
 
@@ -204,20 +177,13 @@ fun MainPage(
                     onClickArticle = { article ->
                         navigator.push(Route.TodayArticle(article.rId))
                     },
+                    onOpenSearch = { navigator.push(Route.Search(null)) },
                 )
 
                 MainTab.Updates -> UpdatesTab(
                     viewModel = updatesViewModel,
                     bottomPadding = bottomPadding,
                     onOpenDetail = openDetail,
-                )
-
-                MainTab.Search -> SearchTab(
-                    viewModel = searchViewModel,
-                    bottomPadding = bottomPadding,
-                    onOpenDetail = openDetail,
-                    isCurrentPage = selectedPage == searchPage,
-                    focusRequestId = searchFocusRequestId,
                 )
 
                 MainTab.Settings -> SettingsTab(
@@ -257,7 +223,7 @@ fun MainPage(
                         tabs.forEachIndexed { index, tab ->
                             NavigationRailItem(
                                 selected = selectedPage == index,
-                                onClick = { onTabClick(index, tab) },
+                                onClick = { onTabClick(index) },
                                 icon = tab.icon,
                                 label = stringResource(tab.labelRes),
                             )
@@ -302,7 +268,7 @@ fun MainPage(
                                     NavigationBarItem(
                                         modifier = Modifier.weight(1f),
                                         selected = selectedPage == index,
-                                        onClick = { onTabClick(index, tab) },
+                                        onClick = { onTabClick(index) },
                                         icon = tab.icon,
                                         label = stringResource(tab.labelRes),
                                         badge = navigationBadge(tab, updatesState.updates.size),
@@ -318,7 +284,7 @@ fun MainPage(
                                         .calculateBottomPadding(),
                                 ),
                             selectedIndex = mainPagerState.selectedPage,
-                            onSelected = { index -> onTabClick(index, tabs[index]) },
+                            onSelected = onTabClick,
                             backdrop = glassBackdrop,
                             tabsCount = tabs.size,
                             isBlurEnabled = enableFloatingBottomBarBlur,
@@ -328,7 +294,7 @@ fun MainPage(
                                 FloatingBottomBarItem(
                                     modifier = Modifier.defaultMinSize(minWidth = 76.dp),
                                     selected = mainPagerState.selectedPage == index,
-                                    onClick = { onTabClick(index, tab) },
+                                    onClick = { onTabClick(index) },
                                 ) {
                                     val badge = navigationBadge(tab, updatesState.updates.size)
                                     val icon: @Composable () -> Unit = {
@@ -384,14 +350,14 @@ fun MainPage(
 private fun HomePage.toTab(): MainTab = when (this) {
     HomePage.TODAY -> MainTab.Today
     HomePage.UPDATES -> MainTab.Updates
-    HomePage.SEARCH -> MainTab.Search
+    // 兼容旧版本保存的搜索首页配置
+    HomePage.SEARCH -> MainTab.Today
 }
 
 private val MainTab.icon
     get() = when (this) {
         MainTab.Today -> MiuixIcons.Create
         MainTab.Updates -> MiuixIcons.Update
-        MainTab.Search -> MiuixIcons.Search
         MainTab.Settings -> MiuixIcons.Settings
     }
 
@@ -399,7 +365,6 @@ private val MainTab.labelRes
     get() = when (this) {
         MainTab.Today -> Res.string.nav_today
         MainTab.Updates -> Res.string.nav_updates
-        MainTab.Search -> Res.string.nav_search
         MainTab.Settings -> Res.string.nav_settings
     }
 
@@ -526,8 +491,4 @@ private fun MainScreenBackHandler(
         onBackCompleted = { mainState.animateToPage(homeIndex) },
     )
 }
-
-
-
-
 

@@ -63,6 +63,7 @@ import com.app.market.resources.Res
 import com.app.market.resources.golden_award
 import com.app.market.resources.nav_today
 import com.app.market.resources.num_updates_pending
+import com.app.market.resources.search_hint
 import com.app.market.resources.view
 import com.app.market.ui.component.AppAsyncImage
 import com.app.market.ui.component.AppButton
@@ -82,7 +83,10 @@ import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
+import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Search
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
@@ -96,6 +100,7 @@ fun TodayTab(
     viewModel: TodayViewModel,
     bottomPadding: Dp,
     onClickArticle: (TodayArticle) -> Unit,
+    onOpenSearch: () -> Unit,
     updatesViewModel: UpdatesViewModel? = null,
     onClickViewUpdates: () -> Unit = {},
 ) {
@@ -149,12 +154,20 @@ fun TodayTab(
             label = "today",
         ) { loading ->
             if (loading) {
-                LoadingBox(
-                    Modifier.fillMaxSize().padding(
+                Column(
+                    modifier = Modifier.fillMaxSize().padding(
+                        start = 12.dp,
+                        end = 12.dp,
                         top = topPadding + PageVerticalPadding,
                         bottom = bottomPadding + PageVerticalPadding,
                     ),
-                )
+                ) {
+                    SearchEntry(
+                        onClick = onOpenSearch,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    LoadingBox(Modifier.fillMaxSize())
+                }
                 return@Crossfade
             }
             LazyVerticalGrid(
@@ -173,6 +186,15 @@ fun TodayTab(
                 ),
                 horizontalArrangement = Arrangement.spacedBy(20.dp),
             ) {
+                item(
+                    key = "search",
+                    span = { GridItemSpan(maxLineSpan) },
+                ) {
+                    SearchEntry(
+                        onClick = onOpenSearch,
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp),
+                    )
+                }
                 if (showUpdatesCard) {
                     item(
                         key = "updates",
@@ -235,6 +257,36 @@ fun TodayTab(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun SearchEntry(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier,
+        onClick = onClick,
+        showIndication = true,
+        insideMargin = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = MiuixIcons.Search,
+                contentDescription = null,
+                tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                modifier = Modifier.size(20.dp),
+            )
+            Text(
+                text = stringResource(Res.string.search_hint),
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                style = MiuixTheme.textStyles.body1,
+            )
         }
     }
 }

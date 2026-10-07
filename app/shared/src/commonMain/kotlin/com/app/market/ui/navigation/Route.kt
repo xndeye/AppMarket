@@ -10,6 +10,9 @@ sealed interface Route : NavKey {
     data object Main : Route
 
     @Serializable
+    data class Search(val keyword: String?) : Route
+
+    @Serializable
     data class AppDetail(
         val appId: Long,
         val packageName: String,

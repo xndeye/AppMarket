@@ -312,9 +312,9 @@ fun SettingsTab(
             item {
                 // 桌面端无「更新」页，首页选项相应剔除
                 val homePageOptions = if (appManagementSupported) {
-                    listOf(HomePage.TODAY, HomePage.UPDATES, HomePage.SEARCH)
+                    listOf(HomePage.TODAY, HomePage.UPDATES)
                 } else {
-                    listOf(HomePage.TODAY, HomePage.SEARCH)
+                    listOf(HomePage.TODAY)
                 }
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                     WindowDropdownPreference(
@@ -355,5 +355,6 @@ private val HomePage.labelRes
     get() = when (this) {
         HomePage.TODAY -> Res.string.nav_today
         HomePage.UPDATES -> Res.string.nav_updates
-        HomePage.SEARCH -> Res.string.nav_search
+        // 旧值仅用于兼容读取，不再作为可选首页展示
+        HomePage.SEARCH -> Res.string.nav_today
     }
