@@ -1,18 +1,18 @@
 package com.app.market.domain.repository
 
-import com.app.market.domain.model.today.TodayArticle
-import com.app.market.domain.model.today.TodayFeedPage
+import com.app.market.domain.model.recommended.RecommendedArticle
+import com.app.market.domain.model.recommended.RecommendedFeedPage
 
 /**
- * Today tab (金米奖) content operations against the Xiaomi App Store APIs.
+ * 通过小米应用商店接口加载推荐页金米奖内容。
  *
  * Implementations live in the platform layer and resolve the device profile + account cookie
  * internally, mirroring [MarketRepository].
  */
-interface TodayRepository {
+interface RecommendedRepository {
     /** Loads one page of Golden Mi Award apps from Xiaomi Market's `zone/goldMiV2` endpoint. */
-    suspend fun goldMiFeed(page: Int = 0, pageSize: Int = 9): TodayFeedPage
+    suspend fun goldMiFeed(page: Int = 0, pageSize: Int = 9): RecommendedFeedPage
 
     /** Loads the article for a feed entry: header image + rich-text body + embedded app. */
-    suspend fun todayArticle(rId: String): TodayArticle
+    suspend fun recommendedArticle(rId: String): RecommendedArticle
 }

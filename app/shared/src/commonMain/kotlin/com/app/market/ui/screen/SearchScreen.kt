@@ -10,7 +10,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,7 +17,6 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -27,6 +25,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
@@ -34,6 +34,8 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
@@ -52,7 +54,6 @@ import com.app.market.domain.model.download.DownloadState
 import com.app.market.domain.model.market.AppSource
 import com.app.market.domain.model.market.MarketAppInfo
 import com.app.market.resources.Res
-import com.app.market.resources.cancel
 import com.app.market.resources.clear_history
 import com.app.market.resources.nav_search
 import com.app.market.resources.no_results
@@ -67,17 +68,20 @@ import com.app.market.ui.component.MarketScaffold
 import com.app.market.ui.component.PageVerticalPadding
 import com.app.market.ui.component.deferredTopPadding
 import com.app.market.ui.model.AppActionKind
+import com.app.market.ui.navigation.PagerNavigationSpringSpec
 import com.app.market.ui.util.appSourceLabel
 import com.app.market.ui.util.installActionText
 import com.app.market.viewmodel.SearchUiState
 import com.app.market.viewmodel.SearchViewModel
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.InputField
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
-import top.yukonga.miuix.kmp.basic.TabRow
 import top.yukonga.miuix.kmp.basic.TabRowDefaults
+import top.yukonga.miuix.kmp.basic.TabRowWithContour
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Close
@@ -95,40 +99,47 @@ fun SearchScreen(
     onBack: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val currentState by rememberUpdatedState(state)
     val downloadStates = viewModel.downloadStates.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
+    val sourceOptions = AppSource.entries
+    val selectedSource = state.sources.firstOrNull() ?: AppSource.Default.first()
+    val selectedSourceIndex = sourceOptions.indexOf(selectedSource)
+    val pagerState = rememberPagerState(initialPage = selectedSourceIndex) { sourceOptions.size }
+    val coroutineScope = rememberCoroutineScope()
 
-    // Infinite scroll: fire on entering the bottom zone; distinctUntilChanged stops a stale "at bottom"
-    // from re-firing after a new search.
-    LaunchedEffect(listState) {
+    LaunchedEffect(pagerState) {
+        // 进入页面时同步偏好，之后由停稳的分页提交来源，避免异步写入反向拉动页面。
+        pagerState.scrollToPage(selectedSourceIndex)
+        snapshotFlow { pagerState.settledPage }
+            .drop(1)
+            .collect { page -> viewModel.selectSource(sourceOptions[page]).join() }
+    }
+
+    // 新搜索完成后重新判断底部位置；不观察 loadingMore，避免失败后在底部自动反复重试。
+    LaunchedEffect(listState, viewModel) {
         snapshotFlow {
             val info = listState.layoutInfo
             val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: -1
-            lastVisible >= 0 && info.totalItemsCount > 0 && lastVisible >= info.totalItemsCount - 3
+            lastVisible >= 0 && info.totalItemsCount > 0 && lastVisible >= info.totalItemsCount - 3 &&
+                    !currentState.loading && currentState.hasMore && currentState.errorMessage.isBlank()
         }
             .distinctUntilChanged()
             .collect { atBottom -> if (atBottom) viewModel.loadMore() }
     }
-    // Reset scroll to top on every completed search (epoch changes even for a same-keyword re-search).
+    // 新搜索或清空输入时回到顶部，同关键词重搜也会更新代次。
     LaunchedEffect(state.searchEpoch) {
         if (state.searchEpoch > 0) listState.scrollToItem(0)
     }
 
     var searchExpanded by remember { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
-    val searchActive = isFocused || state.keyword.isNotEmpty()
     val dismissSearchInput: () -> Unit = {
         focusManager.clearFocus()
         keyboardController?.hide()
-    }
-    val cancelSearch: () -> Unit = {
-        viewModel.clearSearch()
-        searchExpanded = false
-        dismissSearchInput()
     }
 
     LaunchedEffect(initialKeyword) {
@@ -153,47 +164,33 @@ fun SearchScreen(
                 { PageVerticalPadding * (1f - scrollBehavior.state.collapsedFraction) }
             }
             Column(modifier = Modifier.deferredTopPadding(dynamicTopPadding)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    InputField(
-                        query = state.keyword,
-                        onQueryChange = viewModel::setKeyword,
-                        onSearch = {
-                            viewModel.runSearch()
-                            dismissSearchInput()
-                        },
-                        expanded = searchExpanded,
-                        onExpandedChange = { searchExpanded = it },
-                        label = stringResource(Res.string.search_hint),
-                        interactionSource = interactionSource,
-                        modifier = Modifier
-                            .focusRequester(focusRequester)
-                            .weight(1f)
-                            .padding(start = 12.dp, end = 12.dp, bottom = 6.dp),
-                    )
-                    AnimatedVisibility(
-                        visible = searchActive,
-                        enter = expandHorizontally() + fadeIn(),
-                        exit = shrinkHorizontally() + fadeOut(),
-                    ) {
-                        Text(
-                            text = stringResource(Res.string.cancel),
-                            fontWeight = FontWeight.Bold,
-                            color = MiuixTheme.colorScheme.primary,
-                            modifier = Modifier
-                                .padding(start = 4.dp, end = 16.dp, bottom = 6.dp)
-                                .clickable(interactionSource = null, indication = null, onClick = cancelSearch),
-                        )
-                    }
-                }
-                val sourceOptions = AppSource.entries
-                val selectedSource = state.sources.firstOrNull() ?: AppSource.Default.first()
-                TabRow(
+                InputField(
+                    query = state.keyword,
+                    onQueryChange = viewModel::setKeyword,
+                    onSearch = {
+                        viewModel.runSearch()
+                        dismissSearchInput()
+                    },
+                    expanded = searchExpanded,
+                    onExpandedChange = { searchExpanded = it },
+                    label = stringResource(Res.string.search_hint),
+                    interactionSource = interactionSource,
+                    modifier = Modifier
+                        .focusRequester(focusRequester)
+                        .fillMaxWidth()
+                        .padding(start = 12.dp, end = 12.dp, bottom = 6.dp),
+                )
+                TabRowWithContour(
                     tabs = sourceOptions.map { appSourceLabel(it) },
-                    selectedTabIndex = sourceOptions.indexOf(selectedSource).coerceAtLeast(0),
-                    onTabSelected = { viewModel.selectSource(sourceOptions[it]) },
+                    selectedTabIndex = pagerState.currentPage,
+                    onTabSelected = { index ->
+                        coroutineScope.launch {
+                            pagerState.animateScrollToPage(
+                                page = index,
+                                animationSpec = PagerNavigationSpringSpec,
+                            )
+                        }
+                    },
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                     colors = TabRowDefaults.tabRowColors(backgroundColor = Color.Transparent),
                     minWidth = 88.dp,
@@ -209,12 +206,19 @@ fun SearchScreen(
             top = innerPadding.calculateTopPadding() + PageVerticalPadding,
             bottom = innerPadding.calculateBottomPadding() + PageVerticalPadding,
         )
-        Box(Modifier.fillMaxHeight()) {
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize().then(backdropModifier),
+            overscrollEffect = null,
+        ) { page ->
+            // 共用的搜索状态只属于当前来源，其他页面等待切换后的搜索结果。
+            if (sourceOptions[page] != selectedSource) {
+                LoadingBox(Modifier.fillMaxSize().padding(contentPadding))
+                return@HorizontalPager
+            }
             Crossfade(
                 targetState = state.loading && state.results.isEmpty(),
-                modifier = Modifier
-                    .fillMaxSize()
-                    .then(backdropModifier),
+                modifier = Modifier.fillMaxSize(),
                 label = "search",
             ) { fullScreenLoading ->
                 if (fullScreenLoading) {

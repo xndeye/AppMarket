@@ -106,7 +106,7 @@ class StoreMigrationTest {
         advanceUntilIdle()
 
         assertTrue(prefs.initialized.value)
-        assertEquals(HomePage.TODAY, prefs.homePage.value)
+        assertEquals(HomePage.RECOMMENDED, prefs.homePage.value)
         assertTrue(prefs.showSystemUpdates.value)
         scope.cancel()
     }
@@ -251,6 +251,7 @@ private class ControlledPreferencesDataSource(
     }
 
     fun emitDefaultsForRemainingUpdatePreferences() {
+        emit(UpdatePreferenceKeys.ShowRecommendedUpdates, UpdatePreferenceKeys.ShowRecommendedUpdates.default)
         emit(UpdatePreferenceKeys.RemoveSearchAds, false)
         emit(UpdatePreferenceKeys.FilterQuickGames, false)
         emit(UpdatePreferenceKeys.FilterReservationApps, false)
@@ -260,7 +261,7 @@ private class ControlledPreferencesDataSource(
         emit(UpdatePreferenceKeys.StripAppNameSubtitle, false)
         // 空串代表未配置过，回退默认源
         emit(UpdatePreferenceKeys.SearchSources, "")
-        emit(UpdatePreferenceKeys.TodaySource, "")
+        emit(UpdatePreferenceKeys.RecommendedSource, "")
         emit(UpdatePreferenceKeys.UpdateSource, "")
         emit(UpdatePreferenceKeys.PermanentIgnores, "[]")
         emit(UpdatePreferenceKeys.OnceIgnores, "[]")

@@ -9,8 +9,8 @@ enum class AppSource(val token: String, val capabilities: SourceCapabilities) {
             supportsSameDeveloperApps = true,
             prefersOpenLinkLaunch = true,
             reportsDeltaSize = true,
-            supportsTodayFeed = true,
-            todayFullCoverOverlay = true,
+            supportsRecommendedFeed = true,
+            recommendedFullCoverOverlay = true,
             supportsUpdates = true,
             supportsSearchAdsFilter = true,
             supportsQuickAppFilter = true,
@@ -25,8 +25,8 @@ enum class AppSource(val token: String, val capabilities: SourceCapabilities) {
             supportsSameDeveloperApps = false,
             prefersOpenLinkLaunch = true,
             reportsDeltaSize = true,
-            supportsTodayFeed = true,
-            todayFullCoverOverlay = false,
+            supportsRecommendedFeed = true,
+            recommendedFullCoverOverlay = false,
             supportsUpdates = true,
             supportsSearchAdsFilter = true,
         ),
@@ -38,8 +38,8 @@ enum class AppSource(val token: String, val capabilities: SourceCapabilities) {
             supportsSameDeveloperApps = false,
             prefersOpenLinkLaunch = true,
             reportsDeltaSize = true,
-            supportsTodayFeed = false,
-            todayFullCoverOverlay = false,
+            supportsRecommendedFeed = false,
+            recommendedFullCoverOverlay = false,
             // 豌豆荚无原生更新元数据协议，更新下载与手动更新均回退小米，不提供独立更新来源
             supportsUpdates = false,
         ),
@@ -51,8 +51,8 @@ enum class AppSource(val token: String, val capabilities: SourceCapabilities) {
             supportsSameDeveloperApps = true,
             prefersOpenLinkLaunch = false,
             reportsDeltaSize = true,
-            supportsTodayFeed = true,
-            todayFullCoverOverlay = false,
+            supportsRecommendedFeed = true,
+            recommendedFullCoverOverlay = false,
             supportsUpdates = true,
             supportsSearchAdsFilter = true,
         ),
@@ -64,8 +64,8 @@ enum class AppSource(val token: String, val capabilities: SourceCapabilities) {
             supportsSameDeveloperApps = false,
             prefersOpenLinkLaunch = false,
             reportsDeltaSize = false,
-            supportsTodayFeed = false,
-            todayFullCoverOverlay = false,
+            supportsRecommendedFeed = false,
+            recommendedFullCoverOverlay = false,
             supportsUpdates = true,
         ),
     ),
@@ -76,8 +76,8 @@ enum class AppSource(val token: String, val capabilities: SourceCapabilities) {
             supportsSameDeveloperApps = false,
             prefersOpenLinkLaunch = false,
             reportsDeltaSize = true,
-            supportsTodayFeed = false,
-            todayFullCoverOverlay = false,
+            supportsRecommendedFeed = false,
+            recommendedFullCoverOverlay = false,
             supportsUpdates = true,
             supportsSearchAdsFilter = true,
         ),
@@ -89,8 +89,8 @@ enum class AppSource(val token: String, val capabilities: SourceCapabilities) {
             supportsSameDeveloperApps = false,
             prefersOpenLinkLaunch = false,
             reportsDeltaSize = true,
-            supportsTodayFeed = false,
-            todayFullCoverOverlay = false,
+            supportsRecommendedFeed = false,
+            recommendedFullCoverOverlay = false,
             supportsUpdates = true,
             supportsSearchAdsFilter = true,
         ),
@@ -103,8 +103,8 @@ enum class AppSource(val token: String, val capabilities: SourceCapabilities) {
             prefersOpenLinkLaunch = false,
             reportsDeltaSize = false,
             supportsDeltaUpdates = true,
-            supportsTodayFeed = true,
-            todayFullCoverOverlay = false,
+            supportsRecommendedFeed = true,
+            recommendedFullCoverOverlay = false,
             supportsUpdates = true,
         ),
     );
@@ -112,8 +112,8 @@ enum class AppSource(val token: String, val capabilities: SourceCapabilities) {
     companion object {
         val Default: Set<AppSource> = setOf(WANDOUJIA)
 
-        /** 今日页内容来源默认值；须为声明了 [SourceCapabilities.supportsTodayFeed] 的源。 */
-        val DefaultTodaySource: AppSource = XIAOMI
+        /** 推荐页内容来源默认值；须为声明了 [SourceCapabilities.supportsRecommendedFeed] 的源。 */
+        val DefaultRecommendedSource: AppSource = XIAOMI
 
         /** 更新来源默认值；须为声明了 [SourceCapabilities.supportsUpdates] 的源。 */
         val DefaultUpdateSource: AppSource = XIAOMI

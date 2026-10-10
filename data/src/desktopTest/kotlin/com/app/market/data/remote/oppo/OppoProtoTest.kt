@@ -2,7 +2,7 @@ package com.app.market.data.remote.oppo
 
 import com.app.market.domain.model.installed.InstalledPackage
 import com.app.market.domain.model.market.AppSource
-import com.app.market.domain.model.today.TodayArticleBlock
+import com.app.market.domain.model.recommended.RecommendedArticleBlock
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -294,7 +294,7 @@ class OppoProtoTest {
     }
 
     @Test
-    fun beautyWeeklyCardsBecomeTodayFeedItems() {
+    fun beautyWeeklyCardsBecomeRecommendedFeedItems() {
         val resource = encodeOppoMessage(
             encodeOppoStringField(127, "com.heytap.cdo.card.domain.dto.beautyapp.BeautyAppDetailDto"),
             encodeOppoLongField(1, 30755227L),
@@ -449,10 +449,10 @@ class OppoProtoTest {
         assertEquals("经营策略", article.apps.single().category)
         assertEquals(21_920_000L, article.apps.single().downloadCount)
         assertEquals(4, article.blocks.size)
-        assertTrue(article.blocks[0] is TodayArticleBlock.Banner)
-        assertTrue(article.blocks[1] is TodayArticleBlock.RichText)
-        assertTrue(article.blocks[2] is TodayArticleBlock.Image)
-        assertTrue(article.blocks[3] is TodayArticleBlock.App)
+        assertTrue(article.blocks[0] is RecommendedArticleBlock.Banner)
+        assertTrue(article.blocks[1] is RecommendedArticleBlock.RichText)
+        assertTrue(article.blocks[2] is RecommendedArticleBlock.Image)
+        assertTrue(article.blocks[3] is RecommendedArticleBlock.App)
     }
 
     @Test

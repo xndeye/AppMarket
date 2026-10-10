@@ -26,9 +26,9 @@ import com.app.market.data.repository.MarketRepositoryImpl
 import com.app.market.data.repository.MarketSourceRepositoryImpl
 import com.app.market.data.repository.OppoRepositoryImpl
 import com.app.market.data.repository.ProfileRepositoryImpl
+import com.app.market.data.repository.RecommendedRepositoryImpl
 import com.app.market.data.repository.SamsungRepositoryImpl
 import com.app.market.data.repository.TapTapRepositoryImpl
-import com.app.market.data.repository.TodayRepositoryImpl
 import com.app.market.data.repository.VivoRepositoryImpl
 import com.app.market.data.repository.WandoujiaRepositoryImpl
 import com.app.market.data.store.SearchHistoryRepositoryImpl
@@ -43,11 +43,11 @@ import com.app.market.domain.repository.MarketRepository
 import com.app.market.domain.repository.MarketSourceRepository
 import com.app.market.domain.repository.OppoRepository
 import com.app.market.domain.repository.ProfileRepository
+import com.app.market.domain.repository.RecommendedRepository
 import com.app.market.domain.repository.SamsungRepository
 import com.app.market.domain.repository.TapTapRepository
 import com.app.market.domain.repository.SearchHistoryRepository
 import com.app.market.domain.repository.ThemePreferencesRepository
-import com.app.market.domain.repository.TodayRepository
 import com.app.market.domain.repository.UpdateHistoryRepository
 import com.app.market.domain.repository.UpdatePreferencesRepository
 import com.app.market.domain.repository.VivoRepository
@@ -84,7 +84,7 @@ private val commonDataModule = module {
     singleOf(::XiaomiApi)
     singleOf(::ProfileRepositoryImpl) { bind<ProfileRepository>() }
     singleOf(::MarketRepositoryImpl) { bind<MarketRepository>() }
-    singleOf(::TodayRepositoryImpl) { bind<TodayRepository>() }
+    singleOf(::RecommendedRepositoryImpl) { bind<RecommendedRepository>() }
     singleOf(::VivoApi)
     singleOf(::VivoUpdateApi)
     singleOf(::VivoAuroraApi)

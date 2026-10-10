@@ -1,14 +1,14 @@
-package com.app.market.domain.model.today
+package com.app.market.domain.model.recommended
 
 import com.app.market.domain.model.market.MarketAppInfo
 
 /**
- * One entry in the Today tab's Golden Mi Award (金米奖) feed.
+ * 推荐页金米奖内容流中的单个条目。
  *
- * Each entry renders a cover image ([coverImage]) and the awarded [app].
- * Tapping it opens the [TodayArticle] identified by [rId] (loaded via `topic/detail`).
+ * 条目展示封面 [coverImage] 和获奖应用 [app]。
+ * 点击后通过 `topic/detail` 加载 [rId] 对应的 [RecommendedArticle]。
  */
-data class TodayFeaturedItem(
+data class RecommendedFeaturedItem(
     /** Topic id used to load the article; may be empty when the entry only carries a raw [articleLink]. */
     val rId: String,
     val title: String,

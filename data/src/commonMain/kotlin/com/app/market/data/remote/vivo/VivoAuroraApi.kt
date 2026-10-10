@@ -3,10 +3,10 @@ package com.app.market.data.remote.vivo
 import com.app.market.domain.exception.MarketException
 import com.app.market.domain.model.market.AppSource
 import com.app.market.domain.model.market.MarketAppInfo
-import com.app.market.domain.model.today.TodayArticle
-import com.app.market.domain.model.today.TodayArticleBlock
-import com.app.market.domain.model.today.TodayFeaturedItem
-import com.app.market.domain.model.today.TodayFeedPage
+import com.app.market.domain.model.recommended.RecommendedArticle
+import com.app.market.domain.model.recommended.RecommendedArticleBlock
+import com.app.market.domain.model.recommended.RecommendedFeaturedItem
+import com.app.market.domain.model.recommended.RecommendedFeedPage
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
@@ -15,11 +15,11 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 
 internal class VivoAuroraApi(private val client: HttpClient) {
-    suspend fun feed(page: Int, pageSize: Int): TodayFeedPage {
+    suspend fun feed(page: Int, pageSize: Int): RecommendedFeedPage {
         require(page >= 0) { "page must be non-negative" }
         require(pageSize > 0) { "pageSize must be positive" }
         val periods = parseVivoAuroraList(getJson("/aurora/list"))
-        if (periods.isEmpty() || page * pageSize >= periods.size) return TodayFeedPage(emptyList(), false)
+        if (periods.isEmpty() || page * pageSize >= periods.size) return RecommendedFeedPage(emptyList(), false)
 
         val startId = if (page == 0) 0L else periods[page * pageSize].numberId
         val direction = if (page == 0) 0 else 2
@@ -28,7 +28,7 @@ internal class VivoAuroraApi(private val client: HttpClient) {
         val items = pagePeriods.flatMap { period ->
             period.apps.map { entry ->
                 val app = entry.app
-                TodayFeaturedItem(
+                RecommendedFeaturedItem(
                     rId = "${period.numberId}:${app.appId}",
                     title = app.displayName,
                     summary = app.changeLog.ifBlank { app.displayName },
@@ -39,13 +39,13 @@ internal class VivoAuroraApi(private val client: HttpClient) {
                 )
             }
         }
-        return TodayFeedPage(
+        return RecommendedFeedPage(
             items = items,
             hasMore = (page + 1) * pageSize < periods.size,
         )
     }
 
-    suspend fun article(rId: String): TodayArticle {
+    suspend fun article(rId: String): RecommendedArticle {
         val parts = rId.split(':')
         val numberId = parts.getOrNull(0)?.toLongOrNull()?.takeIf { it > 0L }
             ?: throw MarketException("vivo 极光奖期数无效")
@@ -61,17 +61,17 @@ internal class VivoAuroraApi(private val client: HttpClient) {
                 val item = element as? JsonObject ?: return@forEach
                 val title = item.str("detailTitle")
                 val text = item.str("detailText")
-                if (title.isNotBlank()) add(TodayArticleBlock.RichText("<h3>${escapeHtml(title)}</h3>"))
-                if (text.isNotBlank()) add(TodayArticleBlock.RichText(escapeHtml(text).replace("\n", "<br>")))
+                if (title.isNotBlank()) add(RecommendedArticleBlock.RichText("<h3>${escapeHtml(title)}</h3>"))
+                if (text.isNotBlank()) add(RecommendedArticleBlock.RichText(escapeHtml(text).replace("\n", "<br>")))
                 val image = vivoHttpsUrl(item.str("detailPic"))
-                if (image.isNotBlank()) add(TodayArticleBlock.Image(image))
+                if (image.isNotBlank()) add(RecommendedArticleBlock.Image(image))
             }
-            app?.let { add(TodayArticleBlock.App(it)) }
+            app?.let { add(RecommendedArticleBlock.App(it)) }
         }
-        val richText = blocks.filterIsInstance<TodayArticleBlock.RichText>().joinToString("\n") { it.html }
+        val richText = blocks.filterIsInstance<RecommendedArticleBlock.RichText>().joinToString("\n") { it.html }
         val header = value.obj("data")?.arr("backgroundPic")?.strAt(0).orEmpty().let(::vivoHttpsUrl)
         val title = app?.displayName?.ifBlank { value.str("numberName") } ?: value.str("numberName")
-        return TodayArticle(
+        return RecommendedArticle(
             rId = "$numberId:$appId",
             title = title,
             awardName = "极光奖 · 第${value.long("numberId", numberId)}期",

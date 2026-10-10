@@ -12,8 +12,8 @@ import com.app.market.domain.model.market.AppSource
 import com.app.market.domain.model.market.MarketAppInfo
 import com.app.market.domain.model.market.SearchPage
 import com.app.market.domain.model.preference.HomePage
-import com.app.market.domain.model.today.TodayArticle
-import com.app.market.domain.model.today.TodayFeedPage
+import com.app.market.domain.model.recommended.RecommendedArticle
+import com.app.market.domain.model.recommended.RecommendedFeedPage
 import com.app.market.domain.model.update.IgnoredUpdate
 import com.app.market.domain.model.update.ManualUpdateRequest
 import com.app.market.domain.model.update.ManualUpdateResult
@@ -144,8 +144,8 @@ private class RecordingSearchSources : MarketSourceRepository {
     override suspend fun checkManualUpdate(source: AppSource, request: ManualUpdateRequest): ManualUpdateResult =
         error("Not used")
 
-    override suspend fun goldMiFeed(source: AppSource, page: Int, pageSize: Int): TodayFeedPage = error("Not used")
-    override suspend fun todayArticle(source: AppSource, rId: String): TodayArticle = error("Not used")
+    override suspend fun goldMiFeed(source: AppSource, page: Int, pageSize: Int): RecommendedFeedPage = error("Not used")
+    override suspend fun recommendedArticle(source: AppSource, rId: String): RecommendedArticle = error("Not used")
 }
 
 private fun MarketAppInfo.downloadMeta() = DownloadMeta(
@@ -209,6 +209,7 @@ private object SilentUiPlatform : UiPlatform {
 private class SearchPreferences : UpdatePreferencesRepository {
     override val initialized = MutableStateFlow(true)
     override val showSystemUpdates = MutableStateFlow(true)
+    override val showRecommendedUpdates = MutableStateFlow(true)
     override val removeSearchAds = MutableStateFlow(false)
     override val filterQuickGames = MutableStateFlow(false)
     override val filterReservationApps = MutableStateFlow(false)
@@ -218,13 +219,17 @@ private class SearchPreferences : UpdatePreferencesRepository {
     override val stripAppNameSubtitle = MutableStateFlow(false)
     override val homePage = MutableStateFlow(HomePage.SEARCH)
     override val searchSources = MutableStateFlow(setOf(AppSource.HONOR))
-    override val todaySource = MutableStateFlow(AppSource.HONOR)
+    override val recommendedSource = MutableStateFlow(AppSource.HONOR)
     override val updateSource = MutableStateFlow(AppSource.HONOR)
     override val permanentIgnores: StateFlow<List<IgnoredUpdate>> = MutableStateFlow(emptyList())
     override val onceIgnores: StateFlow<List<IgnoredUpdate>> = MutableStateFlow(emptyList())
 
     override suspend fun setShowSystemUpdates(value: Boolean) {
         showSystemUpdates.value = value
+    }
+
+    override suspend fun setShowRecommendedUpdates(value: Boolean) {
+        showRecommendedUpdates.value = value
     }
 
     override suspend fun setRemoveSearchAds(value: Boolean) {
@@ -263,8 +268,8 @@ private class SearchPreferences : UpdatePreferencesRepository {
         searchSources.value = value
     }
 
-    override suspend fun setTodaySource(value: AppSource) {
-        todaySource.value = value
+    override suspend fun setRecommendedSource(value: AppSource) {
+        recommendedSource.value = value
     }
 
     override suspend fun setUpdateSource(value: AppSource) {

@@ -1,6 +1,7 @@
 package com.app.market.ui.navigation
 
 import com.app.market.domain.model.market.AppSource
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import top.yukonga.miuix.kmp.nav.core.NavKey
 
@@ -28,8 +29,10 @@ sealed interface Route : NavKey {
         val displayName: String,
     ) : Route
 
+    // 保留旧版文章路由的序列化名称，以恢复已保存的导航状态。
     @Serializable
-    data class TodayArticle(val rId: String) : Route
+    @SerialName("com.app.market.ui.navigation.Route.TodayArticle")
+    data class RecommendedArticle(val rId: String) : Route
 
     @Serializable
     data object DeviceProfile : Route

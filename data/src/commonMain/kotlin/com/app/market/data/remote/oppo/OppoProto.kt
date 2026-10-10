@@ -2,10 +2,10 @@ package com.app.market.data.remote.oppo
 
 import com.app.market.domain.model.market.AppSource
 import com.app.market.domain.model.market.MarketAppInfo
-import com.app.market.domain.model.today.TodayArticle
-import com.app.market.domain.model.today.TodayArticleBlock
-import com.app.market.domain.model.today.TodayFeaturedItem
-import com.app.market.domain.model.today.TodayFeedPage
+import com.app.market.domain.model.recommended.RecommendedArticle
+import com.app.market.domain.model.recommended.RecommendedArticleBlock
+import com.app.market.domain.model.recommended.RecommendedFeaturedItem
+import com.app.market.domain.model.recommended.RecommendedFeedPage
 
 /** A small protobuf/protostuff reader. OPPO's store payloads use the protobuf wire format. */
 internal data class OppoProtoField(
@@ -248,7 +248,7 @@ internal fun parseOppoResources(bytes: ByteArray): List<OppoResource> {
     return result
 }
 
-internal fun parseOppoBeautyFeed(bytes: ByteArray, pageSize: Int): TodayFeedPage {
+internal fun parseOppoBeautyFeed(bytes: ByteArray, pageSize: Int): RecommendedFeedPage {
     val response = parseOppoProto(bytes)
     val feedTitle = response.string(2)
     val items = response.all(3).mapNotNull { cardField ->
@@ -263,7 +263,7 @@ internal fun parseOppoBeautyFeed(bytes: ByteArray, pageSize: Int): TodayFeedPage
             ?: return@mapNotNull null
         val banner = detail.first(108)?.let(detail::child)
         val ext = detail.stringMap(41)
-        TodayFeaturedItem(
+        RecommendedFeaturedItem(
             rId = snippetId.toString(),
             title = detail.string(107).ifBlank { feedTitle },
             summary = detail.string(103)
@@ -272,27 +272,27 @@ internal fun parseOppoBeautyFeed(bytes: ByteArray, pageSize: Int): TodayFeedPage
             coverImage = banner?.string(2).orEmpty()
                 .ifBlank { ext["largeImage"].orEmpty() }
                 .ifBlank { resource.icon },
-            app = resource.toTodayApp(),
+            app = resource.toRecommendedApp(),
             articleLink = banner?.string(4).orEmpty(),
             awardName = ext["columnType"].orEmpty().ifBlank { feedTitle },
         )
-    }.distinctBy(TodayFeaturedItem::rId)
-    return TodayFeedPage(
+    }.distinctBy(RecommendedFeaturedItem::rId)
+    return RecommendedFeedPage(
         items = items,
         hasMore = items.size >= pageSize,
     )
 }
 
-internal fun parseOppoSnippetArticle(rId: String, bytes: ByteArray): TodayArticle {
+internal fun parseOppoSnippetArticle(rId: String, bytes: ByteArray): RecommendedArticle {
     val response = parseOppoProto(bytes)
     val header = response.first(1)?.let(response::child)
     val body = response.first(2)?.let(response::child)
     val components = body?.let { value -> value.all(1).mapNotNull(value::child) }.orEmpty()
     val firstImage = components.firstNotNullOfOrNull(OppoProtoMessage::imageComponent)
     val headerImage = header?.string(5).orEmpty().ifBlank { firstImage?.url.orEmpty() }
-    val blocks = mutableListOf<TodayArticleBlock>()
+    val blocks = mutableListOf<RecommendedArticleBlock>()
     if (headerImage.isNotBlank()) {
-        blocks += TodayArticleBlock.Banner(
+        blocks += RecommendedArticleBlock.Banner(
             imageUrl = headerImage,
             width = firstImage?.width ?: 0,
             height = firstImage?.height ?: 0,
@@ -308,7 +308,7 @@ internal fun parseOppoSnippetArticle(rId: String, bytes: ByteArray): TodayArticl
                 if (!skippedHeaderImage && image.url == headerImage) {
                     skippedHeaderImage = true
                 } else {
-                    blocks += TodayArticleBlock.Image(
+                    blocks += RecommendedArticleBlock.Image(
                         imageUrl = image.url,
                         width = image.width,
                         height = image.height,
@@ -318,30 +318,30 @@ internal fun parseOppoSnippetArticle(rId: String, bytes: ByteArray): TodayArticl
 
             "TextComponent" -> {
                 val html = component.first(2)?.let(component::child)?.string(101).orEmpty()
-                if (html.isNotBlank()) blocks += TodayArticleBlock.RichText(html)
+                if (html.isNotBlank()) blocks += RecommendedArticleBlock.RichText(html)
             }
 
             "CardComponent" -> {
                 component.bytes(101)?.let(::parseOppoResources).orEmpty()
-                    .map(OppoResource::toTodayApp)
+                    .map(OppoResource::toRecommendedApp)
                     .filter { seenApps.add(it.packageName.lowercase()) }
-                    .forEach { blocks += TodayArticleBlock.App(it) }
+                    .forEach { blocks += RecommendedArticleBlock.App(it) }
             }
         }
     }
 
     if (seenApps.isEmpty()) {
         parseOppoResources(bytes)
-            .map(OppoResource::toTodayApp)
+            .map(OppoResource::toRecommendedApp)
             .filter { seenApps.add(it.packageName.lowercase()) }
-            .forEach { blocks += TodayArticleBlock.App(it) }
+            .forEach { blocks += RecommendedArticleBlock.App(it) }
     }
 
-    val apps = blocks.filterIsInstance<TodayArticleBlock.App>()
-        .map(TodayArticleBlock.App::value)
-    val richText = blocks.filterIsInstance<TodayArticleBlock.RichText>()
-        .joinToString("\n\n", transform = TodayArticleBlock.RichText::html)
-    return TodayArticle(
+    val apps = blocks.filterIsInstance<RecommendedArticleBlock.App>()
+        .map(RecommendedArticleBlock.App::value)
+    val richText = blocks.filterIsInstance<RecommendedArticleBlock.RichText>()
+        .joinToString("\n\n", transform = RecommendedArticleBlock.RichText::html)
+    return RecommendedArticle(
         rId = rId,
         title = header?.string(1).orEmpty().ifBlank { header?.string(7).orEmpty() },
         awardName = response.stringMap(99)["columnType"].orEmpty(),
@@ -393,7 +393,7 @@ private fun OppoProtoMessage.stringMap(number: Int): Map<String, String> = build
     }
 }
 
-private fun OppoResource.toTodayApp(): MarketAppInfo = MarketAppInfo(
+private fun OppoResource.toRecommendedApp(): MarketAppInfo = MarketAppInfo(
     appId = appId,
     packageName = packageName,
     displayName = displayName.ifBlank { packageName },

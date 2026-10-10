@@ -42,6 +42,8 @@ internal class UpdatePreferencesRepositoryImpl(
     private val ignoreMutex = Mutex()
     private val _showSystemUpdates = MutableStateFlow(true)
     override val showSystemUpdates: StateFlow<Boolean> = _showSystemUpdates.asStateFlow()
+    private val _showRecommendedUpdates = MutableStateFlow(UpdatePreferenceKeys.ShowRecommendedUpdates.default)
+    override val showRecommendedUpdates: StateFlow<Boolean> = _showRecommendedUpdates.asStateFlow()
     private val _removeSearchAds = MutableStateFlow(false)
     override val removeSearchAds: StateFlow<Boolean> = _removeSearchAds.asStateFlow()
     private val _filterQuickGames = MutableStateFlow(false)
@@ -57,12 +59,12 @@ internal class UpdatePreferencesRepositoryImpl(
     private val _stripAppNameSubtitle = MutableStateFlow(false)
     override val stripAppNameSubtitle: StateFlow<Boolean> = _stripAppNameSubtitle.asStateFlow()
 
-    private val _homePage = MutableStateFlow(HomePage.TODAY)
+    private val _homePage = MutableStateFlow(HomePage.RECOMMENDED)
     override val homePage: StateFlow<HomePage> = _homePage.asStateFlow()
     private val _searchSources = MutableStateFlow(AppSource.Default)
     override val searchSources: StateFlow<Set<AppSource>> = _searchSources.asStateFlow()
-    private val _todaySource = MutableStateFlow(AppSource.DefaultTodaySource)
-    override val todaySource: StateFlow<AppSource> = _todaySource.asStateFlow()
+    private val _recommendedSource = MutableStateFlow(AppSource.DefaultRecommendedSource)
+    override val recommendedSource: StateFlow<AppSource> = _recommendedSource.asStateFlow()
     private val _updateSource = MutableStateFlow(AppSource.DefaultUpdateSource)
     override val updateSource: StateFlow<AppSource> = _updateSource.asStateFlow()
     private val _permanentIgnores = MutableStateFlow<List<IgnoredUpdate>>(emptyList())
@@ -74,6 +76,7 @@ internal class UpdatePreferencesRepositoryImpl(
         // observe 的首个发射即当前值，无需再串行读一遍
         val arrivals = listOf(
             observe("showSystemUpdates", preferences.observe(UpdatePreferenceKeys.ShowSystemUpdates)) { _showSystemUpdates.value = it },
+            observe("showRecommendedUpdates", preferences.observe(UpdatePreferenceKeys.ShowRecommendedUpdates)) { _showRecommendedUpdates.value = it },
             observe("removeSearchAds", preferences.observe(UpdatePreferenceKeys.RemoveSearchAds)) { _removeSearchAds.value = it },
             observe("filterQuickGames", preferences.observe(UpdatePreferenceKeys.FilterQuickGames)) { _filterQuickGames.value = it },
             observe(
@@ -90,8 +93,8 @@ internal class UpdatePreferencesRepositoryImpl(
             observe("searchSources", preferences.observe(UpdatePreferenceKeys.SearchSources)) {
                 _searchSources.value = AppSource.parse(it)
             },
-            observe("todaySource", preferences.observe(UpdatePreferenceKeys.TodaySource)) {
-                _todaySource.value = AppSource.fromToken(it).todayOrDefault()
+            observe("recommendedSource", preferences.observe(UpdatePreferenceKeys.RecommendedSource)) {
+                _recommendedSource.value = AppSource.fromToken(it).recommendedOrDefault()
             },
             observe("updateSource", preferences.observe(UpdatePreferenceKeys.UpdateSource)) {
                 _updateSource.value = AppSource.fromToken(it) ?: AppSource.DefaultUpdateSource
@@ -129,6 +132,9 @@ internal class UpdatePreferencesRepositoryImpl(
     override suspend fun setShowSystemUpdates(value: Boolean) =
         preferences.put(UpdatePreferenceKeys.ShowSystemUpdates, value)
 
+    override suspend fun setShowRecommendedUpdates(value: Boolean) =
+        preferences.put(UpdatePreferenceKeys.ShowRecommendedUpdates, value)
+
     override suspend fun setRemoveSearchAds(value: Boolean) =
         preferences.put(UpdatePreferenceKeys.RemoveSearchAds, value)
 
@@ -156,8 +162,8 @@ internal class UpdatePreferencesRepositoryImpl(
     override suspend fun setSearchSources(value: Set<AppSource>) =
         preferences.put(UpdatePreferenceKeys.SearchSources, AppSource.serialize(value.ifEmpty { AppSource.Default }))
 
-    override suspend fun setTodaySource(value: AppSource) =
-        preferences.put(UpdatePreferenceKeys.TodaySource, value.todayOrDefault().token)
+    override suspend fun setRecommendedSource(value: AppSource) =
+        preferences.put(UpdatePreferenceKeys.RecommendedSource, value.recommendedOrDefault().token)
 
     override suspend fun setUpdateSource(value: AppSource) =
         preferences.put(UpdatePreferenceKeys.UpdateSource, value.token)
@@ -340,5 +346,5 @@ internal class UpdatePreferencesRepositoryImpl(
     }
 }
 
-private fun AppSource?.todayOrDefault(): AppSource =
-    this?.takeIf { it.capabilities.supportsTodayFeed } ?: AppSource.DefaultTodaySource
+private fun AppSource?.recommendedOrDefault(): AppSource =
+    this?.takeIf { it.capabilities.supportsRecommendedFeed } ?: AppSource.DefaultRecommendedSource

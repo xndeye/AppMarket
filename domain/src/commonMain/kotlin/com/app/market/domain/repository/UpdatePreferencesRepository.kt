@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 interface UpdatePreferencesRepository {
     val initialized: StateFlow<Boolean>
     val showSystemUpdates: StateFlow<Boolean>
+    val showRecommendedUpdates: StateFlow<Boolean>
     val removeSearchAds: StateFlow<Boolean>
     val filterQuickGames: StateFlow<Boolean>
     val filterReservationApps: StateFlow<Boolean>
@@ -19,11 +20,12 @@ interface UpdatePreferencesRepository {
     val stripAppNameSubtitle: StateFlow<Boolean>
     val homePage: StateFlow<HomePage>
     val searchSources: StateFlow<Set<AppSource>>
-    val todaySource: StateFlow<AppSource>
+    val recommendedSource: StateFlow<AppSource>
     val updateSource: StateFlow<AppSource>
     val permanentIgnores: StateFlow<List<IgnoredUpdate>>
     val onceIgnores: StateFlow<List<IgnoredUpdate>>
     suspend fun setShowSystemUpdates(value: Boolean)
+    suspend fun setShowRecommendedUpdates(value: Boolean)
     suspend fun setRemoveSearchAds(value: Boolean)
     suspend fun setFilterQuickGames(value: Boolean)
     suspend fun setFilterReservationApps(value: Boolean)
@@ -33,7 +35,7 @@ interface UpdatePreferencesRepository {
     suspend fun setStripAppNameSubtitle(value: Boolean)
     suspend fun setHomePage(value: HomePage)
     suspend fun setSearchSources(value: Set<AppSource>)
-    suspend fun setTodaySource(value: AppSource)
+    suspend fun setRecommendedSource(value: AppSource)
     suspend fun setUpdateSource(value: AppSource)
     fun isIgnored(app: MarketAppInfo): Boolean
     suspend fun ignoreOnce(app: MarketAppInfo)

@@ -21,7 +21,7 @@ class AppNameFormatTest {
     }
 
     @Test
-    fun xiaomiTodayNamesUseAsciiHyphens() {
+    fun xiaomiRecommendedNamesUseAsciiHyphens() {
         assertEquals(
             AppDisplayName("圆周旅迹", "智能旅行规划助手"),
             "圆周旅迹-智能旅行规划助手".splitAppDisplayName(AppSource.XIAOMI),
@@ -41,14 +41,14 @@ class AppNameFormatTest {
     }
 
     @Test
-    fun todayAwardLabelDoesNotRepeatTheAppName() {
+    fun recommendedAwardLabelDoesNotRepeatTheAppName() {
         assertEquals(
             "极光奖 · 第594期",
-            todayAwardLabel("极光奖 · 第594期", "假日乐消消", "假日乐消消"),
+            recommendedAwardLabel("极光奖 · 第594期", "假日乐消消", "假日乐消消"),
         )
         assertEquals(
             "至美奖 · 推荐应用",
-            todayAwardLabel("至美奖", "推荐应用", "其他应用"),
+            recommendedAwardLabel("至美奖", "推荐应用", "其他应用"),
         )
     }
 

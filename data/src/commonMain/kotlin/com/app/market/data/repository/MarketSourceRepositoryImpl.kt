@@ -6,8 +6,8 @@ import com.app.market.domain.model.market.AppDetail
 import com.app.market.domain.model.market.AppSource
 import com.app.market.domain.model.market.MarketAppInfo
 import com.app.market.domain.model.market.SearchPage
-import com.app.market.domain.model.today.TodayArticle
-import com.app.market.domain.model.today.TodayFeedPage
+import com.app.market.domain.model.recommended.RecommendedArticle
+import com.app.market.domain.model.recommended.RecommendedFeedPage
 import com.app.market.domain.model.update.ManualUpdateRequest
 import com.app.market.domain.model.update.ManualUpdateResult
 import com.app.market.domain.repository.HonorRepository
@@ -15,8 +15,8 @@ import com.app.market.domain.repository.HuaweiRepository
 import com.app.market.domain.repository.MarketRepository
 import com.app.market.domain.repository.MarketSourceRepository
 import com.app.market.domain.repository.OppoRepository
+import com.app.market.domain.repository.RecommendedRepository
 import com.app.market.domain.repository.SamsungRepository
-import com.app.market.domain.repository.TodayRepository
 import com.app.market.domain.repository.TapTapRepository
 import com.app.market.domain.repository.VivoRepository
 import com.app.market.domain.repository.WandoujiaRepository
@@ -26,7 +26,7 @@ import kotlinx.coroutines.flow.flow
 /** Central source router. Capabilities are declared on [AppSource.capabilities]. */
 internal class MarketSourceRepositoryImpl(
     private val market: MarketRepository,
-    private val today: TodayRepository,
+    private val recommended: RecommendedRepository,
     private val vivo: VivoRepository,
     private val wandoujia: WandoujiaRepository,
     private val oppo: OppoRepository,
@@ -131,25 +131,25 @@ internal class MarketSourceRepositoryImpl(
             AppSource.TAPTAP -> tapTap.checkManualUpdate(request)
         }
 
-    override suspend fun goldMiFeed(source: AppSource, page: Int, pageSize: Int): TodayFeedPage =
+    override suspend fun goldMiFeed(source: AppSource, page: Int, pageSize: Int): RecommendedFeedPage =
         when (source) {
             AppSource.OPPO -> oppo.beautyFeed(page, pageSize)
-            // 豌豆荚 / 三星 / 华为 / 荣耀无独立今日内容，回退小米商店今日
+            // 豌豆荚 / 三星 / 华为 / 荣耀无独立推荐内容，回退小米商店推荐
             AppSource.XIAOMI, AppSource.WANDOUJIA, AppSource.SAMSUNG, AppSource.HUAWEI, AppSource.HONOR ->
-                today.goldMiFeed(page, pageSize)
+                recommended.goldMiFeed(page, pageSize)
 
             AppSource.VIVO -> vivo.auroraFeed(page, pageSize)
-            AppSource.TAPTAP -> tapTap.todayFeed(page, pageSize)
+            AppSource.TAPTAP -> tapTap.recommendedFeed(page, pageSize)
         }
 
-    override suspend fun todayArticle(source: AppSource, rId: String): TodayArticle =
+    override suspend fun recommendedArticle(source: AppSource, rId: String): RecommendedArticle =
         when (source) {
             AppSource.OPPO -> oppo.beautyArticle(rId)
             AppSource.XIAOMI, AppSource.WANDOUJIA, AppSource.SAMSUNG, AppSource.HUAWEI, AppSource.HONOR ->
-                today.todayArticle(rId)
+                recommended.recommendedArticle(rId)
 
             AppSource.VIVO -> vivo.auroraArticle(rId)
-            AppSource.TAPTAP -> tapTap.todayArticle(rId)
+            AppSource.TAPTAP -> tapTap.recommendedArticle(rId)
         }
 
     private suspend fun MarketAppInfo.onXiaomi(): MarketAppInfo {

@@ -7,7 +7,7 @@ import kotlin.test.assertEquals
 
 class FormatTest {
     @Test
-    fun todaySummaryUsesCategoryAndInstallCount() {
+    fun recommendedSummaryUsesCategoryAndInstallCount() {
         val app = MarketAppInfo(
             appId = 30_755_227L,
             packageName = "com.example.beauty",
@@ -23,11 +23,11 @@ class FormatTest {
             downloadCount = 21_923_487L,
         )
 
-        assertEquals("经营策略 | 2192.3万次安装", app.todayAppSummary())
+        assertEquals("经营策略 | 2192.3万次安装", app.recommendedAppSummary())
     }
 
     @Test
-    fun todaySummaryFallsBackWhenStoreMetadataIsAbsent() {
+    fun recommendedSummaryFallsBackWhenStoreMetadataIsAbsent() {
         val app = MarketAppInfo(
             appId = 1L,
             packageName = "com.example.app",
@@ -40,6 +40,6 @@ class FormatTest {
             ratingScore = 0.0,
         )
 
-        assertEquals("开发者", app.todayAppSummary())
+        assertEquals("开发者", app.recommendedAppSummary())
     }
 }

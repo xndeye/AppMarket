@@ -4,8 +4,8 @@ import com.app.market.domain.model.download.DownloadMeta
 import com.app.market.domain.model.market.AppDetail
 import com.app.market.domain.model.market.MarketAppInfo
 import com.app.market.domain.model.market.SearchPage
-import com.app.market.domain.model.today.TodayArticle
-import com.app.market.domain.model.today.TodayFeedPage
+import com.app.market.domain.model.recommended.RecommendedArticle
+import com.app.market.domain.model.recommended.RecommendedFeedPage
 import com.app.market.domain.model.update.ManualUpdateRequest
 import com.app.market.domain.model.update.ManualUpdateResult
 
@@ -24,7 +24,7 @@ interface VivoRepository {
 
     suspend fun checkManualUpdate(request: ManualUpdateRequest): ManualUpdateResult
 
-    suspend fun auroraFeed(page: Int = 0, pageSize: Int = 6): TodayFeedPage
+    suspend fun auroraFeed(page: Int = 0, pageSize: Int = 6): RecommendedFeedPage
 
-    suspend fun auroraArticle(rId: String): TodayArticle
+    suspend fun auroraArticle(rId: String): RecommendedArticle
 }

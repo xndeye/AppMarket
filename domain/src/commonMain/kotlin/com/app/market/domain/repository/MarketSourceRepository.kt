@@ -6,8 +6,8 @@ import com.app.market.domain.model.market.AppDetail
 import com.app.market.domain.model.market.AppSource
 import com.app.market.domain.model.market.MarketAppInfo
 import com.app.market.domain.model.market.SearchPage
-import com.app.market.domain.model.today.TodayArticle
-import com.app.market.domain.model.today.TodayFeedPage
+import com.app.market.domain.model.recommended.RecommendedArticle
+import com.app.market.domain.model.recommended.RecommendedFeedPage
 import com.app.market.domain.model.update.ManualUpdateRequest
 import com.app.market.domain.model.update.ManualUpdateResult
 import kotlinx.coroutines.flow.Flow
@@ -43,7 +43,7 @@ interface MarketSourceRepository {
 
     suspend fun checkManualUpdate(source: AppSource, request: ManualUpdateRequest): ManualUpdateResult
 
-    suspend fun goldMiFeed(source: AppSource, page: Int = 0, pageSize: Int = 9): TodayFeedPage
+    suspend fun goldMiFeed(source: AppSource, page: Int = 0, pageSize: Int = 9): RecommendedFeedPage
 
-    suspend fun todayArticle(source: AppSource, rId: String): TodayArticle
+    suspend fun recommendedArticle(source: AppSource, rId: String): RecommendedArticle
 }

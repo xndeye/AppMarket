@@ -1,15 +1,15 @@
-package com.app.market.domain.model.today
+package com.app.market.domain.model.recommended
 
 import com.app.market.domain.model.market.MarketAppInfo
 
 /**
- * A single Today / 金米奖 article loaded via `topic/detail`.
+ * 通过 `topic/detail` 加载的推荐文章。
  *
  * The server delivers the body as an ordered list of topic blocks; the data layer flattens it into a
  * [headerImage] (the leading banner) plus [richTextHtml] (the concatenated text blocks) and lifts the
  * embedded app card out into [app].
  */
-data class TodayArticle(
+data class RecommendedArticle(
     val rId: String,
     val title: String,
     /** Source-provided award name. Empty keeps the localized Xiaomi default in the UI. */
@@ -25,10 +25,10 @@ data class TodayArticle(
     /** All app cards embedded in the topic. Group articles can contain several apps. */
     val apps: List<MarketAppInfo> = app?.let(::listOf).orEmpty(),
     /** Server content in `topicItemList` order. Legacy aggregate fields above remain available. */
-    val blocks: List<TodayArticleBlock> = buildList {
-        if (headerImage.isNotBlank()) add(TodayArticleBlock.Banner(headerImage))
-        if (richTextHtml.isNotBlank()) add(TodayArticleBlock.RichText(richTextHtml))
-        apps.forEach { add(TodayArticleBlock.App(it)) }
+    val blocks: List<RecommendedArticleBlock> = buildList {
+        if (headerImage.isNotBlank()) add(RecommendedArticleBlock.Banner(headerImage))
+        if (richTextHtml.isNotBlank()) add(RecommendedArticleBlock.RichText(richTextHtml))
+        apps.forEach { add(RecommendedArticleBlock.App(it)) }
     },
     /** Whether the standard award/title label is drawn above the article reason. */
     val showTitleLabel: Boolean = true,

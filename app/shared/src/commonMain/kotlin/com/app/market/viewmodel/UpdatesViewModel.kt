@@ -58,11 +58,12 @@ class UpdatesViewModel(
     private val _raw = MutableStateFlow(RawUpdates(loading = true))
 
     val downloadStates: StateFlow<Map<String, DownloadState>> = downloads.states
+    val showRecommendedUpdates: StateFlow<Boolean> = prefs.showRecommendedUpdates
 
     // Separate flow (not in [uiState]) so the pager can read the seeded value synchronously.
     val homePage: StateFlow<HomePage> = prefs.homePage
     val searchSources: StateFlow<Set<AppSource>> = prefs.searchSources
-    val todaySource: StateFlow<AppSource> = prefs.todaySource
+    val recommendedSource: StateFlow<AppSource> = prefs.recommendedSource
     val updateSource: StateFlow<AppSource> = prefs.updateSource
 
     // App-detail display toggles; consumed by the detail screen, surfaced here for the settings UI.
@@ -131,6 +132,7 @@ class UpdatesViewModel(
     }
 
     fun setShowSystemUpdates(value: Boolean) = persist { prefs.setShowSystemUpdates(value) }
+    fun setShowRecommendedUpdates(value: Boolean) = persist { prefs.setShowRecommendedUpdates(value) }
     fun setRemoveSearchAds(value: Boolean) = persist { prefs.setRemoveSearchAds(value) }
     fun setFilterQuickGames(value: Boolean) = persist { prefs.setFilterQuickGames(value) }
     fun setFilterReservationApps(value: Boolean) = persist { prefs.setFilterReservationApps(value) }
@@ -140,7 +142,7 @@ class UpdatesViewModel(
     fun setStripAppNameSubtitle(value: Boolean) = persist { prefs.setStripAppNameSubtitle(value) }
     fun setHomePage(value: HomePage) = persist { prefs.setHomePage(value) }
     fun setSearchSource(value: AppSource) = persist { prefs.setSearchSources(setOf(value)) }
-    fun setTodaySource(value: AppSource) = persist { prefs.setTodaySource(value) }
+    fun setRecommendedSource(value: AppSource) = persist { prefs.setRecommendedSource(value) }
     fun setUpdateSource(value: AppSource) = persist { prefs.setUpdateSource(value) }
 
     fun startInitialCheck() {

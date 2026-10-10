@@ -2,13 +2,14 @@ package com.app.market.domain.model.preference
 
 /** The tab opened on launch and returned to by Back. */
 enum class HomePage(val token: String) {
-    TODAY("today"),
+    // 保留已持久化的首页值。
+    RECOMMENDED("today"),
     UPDATES("updates"),
-    /** 仅兼容旧版本持久化值，当前导航将其映射到 [TODAY]。 */
+    /** 仅兼容旧版本持久化值，当前导航将其映射到 [RECOMMENDED]。 */
     SEARCH("search");
 
     companion object {
-        /** Resolve from a persisted [token]; unknown/null falls back to [TODAY]. */
-        fun fromToken(token: String?): HomePage = entries.firstOrNull { it.token == token } ?: TODAY
+        /** Resolve from a persisted [token]; unknown/null falls back to [RECOMMENDED]. */
+        fun fromToken(token: String?): HomePage = entries.firstOrNull { it.token == token } ?: RECOMMENDED
     }
 }

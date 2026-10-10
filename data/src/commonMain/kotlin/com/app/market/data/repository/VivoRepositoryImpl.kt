@@ -19,8 +19,8 @@ import com.app.market.domain.model.market.AppDetail
 import com.app.market.domain.model.market.AppSource
 import com.app.market.domain.model.market.MarketAppInfo
 import com.app.market.domain.model.market.SearchPage
-import com.app.market.domain.model.today.TodayArticle
-import com.app.market.domain.model.today.TodayFeedPage
+import com.app.market.domain.model.recommended.RecommendedArticle
+import com.app.market.domain.model.recommended.RecommendedFeedPage
 import com.app.market.domain.model.update.ManualUpdateRequest
 import com.app.market.domain.model.update.ManualUpdateResult
 import com.app.market.domain.model.update.ManualUpdateStatus
@@ -313,10 +313,10 @@ internal class VivoRepositoryImpl(
             }
         }
 
-    override suspend fun auroraFeed(page: Int, pageSize: Int): TodayFeedPage =
+    override suspend fun auroraFeed(page: Int, pageSize: Int): RecommendedFeedPage =
         withContext(Dispatchers.Default) { auroraApi.feed(page, pageSize) }
 
-    override suspend fun auroraArticle(rId: String): TodayArticle =
+    override suspend fun auroraArticle(rId: String): RecommendedArticle =
         withContext(Dispatchers.Default) { auroraApi.article(rId) }
 
     private suspend fun resolveInstalled(app: MarketAppInfo): InstalledPackage =

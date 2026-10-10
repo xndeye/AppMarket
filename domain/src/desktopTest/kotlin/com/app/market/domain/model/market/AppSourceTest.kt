@@ -37,15 +37,15 @@ class AppSourceTest {
         assertTrue(AppSource.XIAOMI.capabilities.reportsDeltaSize)
         assertTrue(AppSource.HUAWEI.capabilities.reportsDeltaSize)
 
-        // 豌豆荚 / 三星 / 华为 / 荣耀没有独立今日页内容
-        assertFalse(AppSource.WANDOUJIA.capabilities.supportsTodayFeed)
-        assertFalse(AppSource.SAMSUNG.capabilities.supportsTodayFeed)
-        assertFalse(AppSource.HUAWEI.capabilities.supportsTodayFeed)
-        assertFalse(AppSource.HONOR.capabilities.supportsTodayFeed)
-        assertTrue(AppSource.XIAOMI.capabilities.supportsTodayFeed)
-        assertTrue(AppSource.VIVO.capabilities.supportsTodayFeed)
-        assertTrue(AppSource.OPPO.capabilities.supportsTodayFeed)
-        assertTrue(AppSource.DefaultTodaySource.capabilities.supportsTodayFeed)
+        // 豌豆荚 / 三星 / 华为 / 荣耀没有独立推荐页内容
+        assertFalse(AppSource.WANDOUJIA.capabilities.supportsRecommendedFeed)
+        assertFalse(AppSource.SAMSUNG.capabilities.supportsRecommendedFeed)
+        assertFalse(AppSource.HUAWEI.capabilities.supportsRecommendedFeed)
+        assertFalse(AppSource.HONOR.capabilities.supportsRecommendedFeed)
+        assertTrue(AppSource.XIAOMI.capabilities.supportsRecommendedFeed)
+        assertTrue(AppSource.VIVO.capabilities.supportsRecommendedFeed)
+        assertTrue(AppSource.OPPO.capabilities.supportsRecommendedFeed)
+        assertTrue(AppSource.DefaultRecommendedSource.capabilities.supportsRecommendedFeed)
 
         // 搜索过滤 / 详情优惠目前只有对应源会声明
         assertTrue(AppSource.XIAOMI.capabilities.supportsSearchAdsFilter)

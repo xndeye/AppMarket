@@ -2,7 +2,7 @@
     <string name="app_name">App Store</string>
 
     <!-- Navigation -->
-    <string name="nav_today">Recommended</string>
+    <string name="nav_recommended">Recommended</string>
     <string name="nav_updates">Updates</string>
     <string name="nav_search">Search</string>
     <string name="nav_settings">Settings</string>
@@ -20,7 +20,7 @@
     <string name="view">View</string>
     <string name="view_more">View more</string>
 
-    <!-- Today -->
+    <!-- 推荐 -->
     <string name="featured">Featured</string>
     <string name="recommended">Recommended</string>
     <string name="golden_award">Golden Award</string>
@@ -48,6 +48,8 @@
     <string name="updates_title">App updates</string>
     <string name="check_updates">Check updates</string>
     <string name="available_updates">Available updates</string>
+    <string name="regular_apps">Regular apps</string>
+    <string name="system_apps">System apps</string>
     <string name="num_updates_pending">%1$d updates pending</string>
     <string name="update_all">Update all</string>
     <string name="show_system_apps">Show system app</string>
@@ -91,6 +93,8 @@
     <string name="theme_page_scale_range">80% - 110%</string>
     <string name="home_page">Home page</string>
     <string name="home_page_summary">Page opened on launch</string>
+    <string name="show_recommended_updates">Recommended update banner</string>
+    <string name="show_recommended_updates_summary">Show apps with pending updates and a shortcut to Updates on Recommended</string>
     <string name="remove_search_ads">Remove promoted apps</string>
     <string name="remove_search_ads_summary">Applies to the current search source. Hide promoted results.</string>
     <string name="filter_quick_games">Remove quick apps</string>
@@ -105,8 +109,8 @@
     <string name="search_sources_summary">Default source for search and app details; switchable on the results page</string>
     <string name="update_source">Update source</string>
     <string name="update_source_summary">Used to check for app updates</string>
-    <string name="today_source">Recommended source</string>
-    <string name="today_source_summary">Used for Recommended page content</string>
+    <string name="recommended_source">Recommended source</string>
+    <string name="recommended_source_summary">Used for Recommended page content</string>
     <string name="source_xiaomi">小米</string>
     <string name="source_vivo">VIVO</string>
     <string name="source_wandoujia">Wandoujia</string>

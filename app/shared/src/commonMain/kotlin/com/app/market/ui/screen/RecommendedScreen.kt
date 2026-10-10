@@ -57,11 +57,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.market.domain.model.market.MarketAppInfo
-import com.app.market.domain.model.today.TodayArticle
-import com.app.market.domain.model.today.TodayFeaturedItem
+import com.app.market.domain.model.recommended.RecommendedArticle
+import com.app.market.domain.model.recommended.RecommendedFeaturedItem
 import com.app.market.resources.Res
 import com.app.market.resources.golden_award
-import com.app.market.resources.nav_today
+import com.app.market.resources.nav_recommended
 import com.app.market.resources.num_updates_pending
 import com.app.market.resources.search_hint
 import com.app.market.resources.view
@@ -73,9 +73,9 @@ import com.app.market.ui.component.LoadingBox
 import com.app.market.ui.component.PageVerticalPadding
 import com.app.market.ui.theme.LocalEnableFloatingBottomBar
 import com.app.market.ui.util.appDisplayName
-import com.app.market.ui.util.todayAwardLabel
-import com.app.market.ui.util.todayAppSummary
-import com.app.market.viewmodel.TodayViewModel
+import com.app.market.ui.util.recommendedAppSummary
+import com.app.market.ui.util.recommendedAwardLabel
+import com.app.market.viewmodel.RecommendedViewModel
 import com.app.market.viewmodel.UpdatesViewModel
 import kotlinx.coroutines.flow.distinctUntilChanged
 import org.jetbrains.compose.resources.stringResource
@@ -93,24 +93,25 @@ import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import kotlin.math.ceil
 
 private val PaperCardRadius = 16.dp
-private val TodayGridMinCellWidth = 320.dp
+private val RecommendedGridMinCellWidth = 320.dp
 
 @Composable
-fun TodayTab(
-    viewModel: TodayViewModel,
+fun RecommendedTab(
+    viewModel: RecommendedViewModel,
     bottomPadding: Dp,
-    onClickArticle: (TodayArticle) -> Unit,
+    onClickArticle: (RecommendedArticle) -> Unit,
     onOpenSearch: () -> Unit,
     updatesViewModel: UpdatesViewModel? = null,
     onClickViewUpdates: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val updateState = updatesViewModel?.uiState?.collectAsStateWithLifecycle()?.value
+    val showRecommendedUpdates = updatesViewModel?.showRecommendedUpdates?.collectAsStateWithLifecycle()?.value == true
     val listState = rememberLazyGridState()
     val currentState by rememberUpdatedState(state)
     val pendingUpdates =
         if (updateState != null && !updateState.loading) updateState.updates else emptyList()
-    val showUpdatesCard = pendingUpdates.isNotEmpty()
+    val showUpdatesCard = showRecommendedUpdates && pendingUpdates.isNotEmpty()
     val enableFloatingBottomBar = LocalEnableFloatingBottomBar.current
 
     LaunchedEffect(showUpdatesCard) {
@@ -137,7 +138,7 @@ fun TodayTab(
     }
 
     HidingMainTabScaffold(
-        title = stringResource(Res.string.nav_today),
+        title = stringResource(Res.string.nav_recommended),
         bottomTransitionHeight = if (enableFloatingBottomBar) {
             bottomPadding + PageVerticalPadding
         } else {
@@ -151,7 +152,7 @@ fun TodayTab(
                 .fillMaxSize()
                 .background(MiuixTheme.colorScheme.surface)
                 .then(backdropModifier),
-            label = "today",
+            label = "recommended",
         ) { loading ->
             if (loading) {
                 Column(
@@ -171,7 +172,7 @@ fun TodayTab(
                 return@Crossfade
             }
             LazyVerticalGrid(
-                columns = GridCells.Adaptive(TodayGridMinCellWidth),
+                columns = GridCells.Adaptive(RecommendedGridMinCellWidth),
                 state = listState,
                 modifier = Modifier
                     .fillMaxSize()
@@ -218,7 +219,7 @@ fun TodayTab(
                 items(state.feed.items, key = { "feed-${it.rId.ifBlank { it.articleLink }}" }) { item ->
                     FeaturedArticleCard(
                         item = item,
-                        fullCoverOverlay = state.source.capabilities.todayFullCoverOverlay,
+                        fullCoverOverlay = state.source.capabilities.recommendedFullCoverOverlay,
                         modifier = Modifier
                             .animateItem(placementSpec = null)
                             .padding(bottom = 20.dp),
@@ -291,10 +292,10 @@ private fun SearchEntry(
     }
 }
 
-private fun openArticle(item: TodayFeaturedItem, onClickArticle: (TodayArticle) -> Unit) {
+private fun openArticle(item: RecommendedFeaturedItem, onClickArticle: (RecommendedArticle) -> Unit) {
     val articleId = item.rId.ifBlank { return }
     onClickArticle(
-        TodayArticle(
+        RecommendedArticle(
             rId = articleId,
             title = item.title,
             awardName = item.awardName,
@@ -519,7 +520,7 @@ internal fun AdaptiveAppIconRow(
 
 @Composable
 private fun FeaturedArticleCard(
-    item: TodayFeaturedItem,
+    item: RecommendedFeaturedItem,
     modifier: Modifier = Modifier,
     fullCoverOverlay: Boolean = false,
     onClick: () -> Unit,
@@ -549,7 +550,7 @@ private fun FeaturedArticleCard(
         ),
         onClick = onClick,
     ) {
-        // 小米今日整卡覆盖：两行文案与应用行都叠加在封面上；其余来源保持两行文案覆盖 + 应用行附加
+        // 小米推荐整卡覆盖：两行文案与应用行都叠加在封面上；其余来源保持两行文案覆盖 + 应用行附加
         if (fullCoverOverlay && hasCover) {
             Box(coverSizeModifier) {
                 FeaturedCoverImage(
@@ -599,7 +600,7 @@ private fun FeaturedArticleCard(
 
 @Composable
 private fun FeaturedCoverImage(
-    item: TodayFeaturedItem,
+    item: RecommendedFeaturedItem,
     modifier: Modifier = Modifier,
     onGradientColor: (Color) -> Unit,
     onCoverSize: (width: Int, height: Int) -> Unit,
@@ -640,7 +641,7 @@ private fun CoverScrim(color: Color) {
 
 @Composable
 private fun EditorialFeatureContent(
-    item: TodayFeaturedItem,
+    item: RecommendedFeaturedItem,
     modifier: Modifier = Modifier,
 ) {
     val label = item.awardName.ifBlank { stringResource(Res.string.golden_award) }
@@ -651,7 +652,7 @@ private fun EditorialFeatureContent(
             .padding(16.dp),
     ) {
         if (item.showTitleLabel) {
-            FeatureLabel(todayAwardLabel(label, item.title, appName))
+            FeatureLabel(recommendedAwardLabel(label, item.title, appName))
         }
         FeatureTitle(item.summary.ifBlank { item.title })
     }
@@ -687,7 +688,7 @@ private fun AppFeatureContent(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            FeatureSummary(app.todayAppSummary())
+            FeatureSummary(app.recommendedAppSummary())
         }
     }
 }

@@ -9,13 +9,13 @@ Kotlin Multiplatform（Android + Desktop）应用商店客户端，UI 使用 Com
 - **页面出入距 `PageVerticalPadding` = 12dp**：所有滚动页面「顶栏底部 → 内容顶部」「内容末尾 → 页面底部」的额外间距，一律引用该常量，不写字面量。
   - 出入距统一通过列表 `contentPadding` 实现（顶部 `顶栏 padding + PageVerticalPadding`、底部 `innerPadding/bottomPadding + PageVerticalPadding`），不用首 / 末 `Spacer` item 承载。
   - `bottomPadding: Dp` 参数只出现在主 Tab 页签名里（外层 Scaffold 持有悬浮底栏，需透传其高度）；二级推入页一律用自己脚手架的 `innerPadding`，签名不带 `bottomPadding`。
-- **卡片 / 区块间距 = 20dp**：今日页网格 `spacedBy`、更新页汇总卡到列表、应用详情主列表 `spacedBy` 等。
+- **卡片 / 区块间距 = 20dp**：推荐页网格 `spacedBy`、更新页汇总卡到列表、应用详情主列表 `spacedBy` 等。
 - **小标题 `SectionTitle`**（应用详情页直接用 `SmallTitle`，同一套规则）：
   - 上方 20dp，由标题自身的 `topPadding` 参数提供；标题上方的元素一律不加自己的底边距；
   - 紧贴顶栏时传 `topPadding = 0.dp`，只保留页面 12dp 出入距（详情页由列表 contentPadding 提供）；
   - 标题 → 下方内容 8dp；水平 28dp（对齐卡片内容：12dp 卡片边距 + 16dp 内边距）。
 - **卡片自身不携带外部垂直边距**：垂直节奏统一由列表 / 区块的 spacing 提供，卡片带自身外边距会造成间距叠加不一致。
-- **特例**（不套用上述规则）：关于页（视差布局）、今日文章页（沉浸式）；更新 / 更新历史等页的行由 `CardSegmentContainer` 无缝拼接（`spacedBy(0)`）。
+- **特例**（不套用上述规则）：关于页（视差布局）、推荐文章页（沉浸式）；更新 / 更新历史等页的行由 `CardSegmentContainer` 无缝拼接（`spacedBy(0)`）。
 
 ## UI 规范：通用模式
 

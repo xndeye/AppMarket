@@ -3,9 +3,9 @@ package com.app.market.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.market.domain.model.market.AppSource
-import com.app.market.domain.model.today.TodayArticle
-import com.app.market.domain.model.today.TodayFeaturedItem
-import com.app.market.domain.model.today.TodayFeedPage
+import com.app.market.domain.model.recommended.RecommendedArticle
+import com.app.market.domain.model.recommended.RecommendedFeaturedItem
+import com.app.market.domain.model.recommended.RecommendedFeedPage
 import com.app.market.domain.repository.MarketSourceRepository
 import com.app.market.domain.repository.UpdatePreferencesRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,11 +14,11 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-data class TodayUiState(
-    /** 当前今日内容来源；卡片布局（如小米的完全覆盖式）据此分派。 */
+data class RecommendedUiState(
+    /** 当前推荐内容来源；卡片布局（如小米的完全覆盖式）据此分派。 */
     val source: AppSource = AppSource.XIAOMI,
-    val feed: TodayFeedPage = TodayFeedPage(emptyList(), true),
-    val article: TodayArticle? = null,
+    val feed: RecommendedFeedPage = RecommendedFeedPage(emptyList(), true),
+    val article: RecommendedArticle? = null,
     val articleLoading: Boolean = false,
     val articleError: String = "",
     val feedLoading: Boolean = true,
@@ -26,29 +26,29 @@ data class TodayUiState(
     val feedError: String = "",
 )
 
-class TodayViewModel(
+class RecommendedViewModel(
     private val sources: MarketSourceRepository,
     private val prefs: UpdatePreferencesRepository,
 ) : ViewModel() {
     // 文章正文含全部区块与 HTML，单篇可达数十 KB；长会话连续浏览需要上限
-    private val articleCache = object : LinkedHashMap<String, TodayArticle>(16, 0.75f, true) {
-        override fun removeEldestEntry(eldest: Map.Entry<String, TodayArticle>): Boolean = size > ARTICLE_CACHE_SIZE
+    private val articleCache = object : LinkedHashMap<String, RecommendedArticle>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: Map.Entry<String, RecommendedArticle>): Boolean = size > ARTICLE_CACHE_SIZE
     }
     private var loadingArticleId: String? = null
-    private var activeSource = prefs.todaySource.value
+    private var activeSource = prefs.recommendedSource.value
     private var sourceGeneration = 0L
     private var nextFeedPage = 0
-    private val _uiState = MutableStateFlow(TodayUiState(source = prefs.todaySource.value))
+    private val _uiState = MutableStateFlow(RecommendedUiState(source = prefs.recommendedSource.value))
     val uiState = _uiState.asStateFlow()
 
     init {
         viewModelScope.launch {
             // StateFlow 自身去重，无需 distinctUntilChanged
-            prefs.todaySource.collectLatest(::switchSource)
+            prefs.recommendedSource.collectLatest(::switchSource)
         }
     }
 
-    private fun loadTodayData() {
+    private fun loadRecommendedData() {
         val source = activeSource
         val generation = sourceGeneration
         viewModelScope.launch {
@@ -73,7 +73,7 @@ class TodayViewModel(
     fun retryFeed() {
         val snapshot = _uiState.value
         if (snapshot.feedLoading || snapshot.feedLoadingMore) return
-        if (snapshot.feed.items.isEmpty()) loadTodayData() else loadMore()
+        if (snapshot.feed.items.isEmpty()) loadRecommendedData() else loadMore()
     }
 
     private suspend fun switchSource(source: AppSource) {
@@ -82,7 +82,7 @@ class TodayViewModel(
         nextFeedPage = 0
         articleCache.clear()
         loadingArticleId = null
-        _uiState.value = TodayUiState(source = source)
+        _uiState.value = RecommendedUiState(source = source)
         loadFeedPage(source, sourceGeneration, replace = true)
     }
 
@@ -95,11 +95,11 @@ class TodayViewModel(
 
         _uiState.update { before ->
             val existing = if (replace) emptyList() else before.feed.items
-            val existingKeys = existing.mapTo(HashSet(), TodayFeaturedItem::feedKey)
+            val existingKeys = existing.mapTo(HashSet(), RecommendedFeaturedItem::feedKey)
             val appended = page?.items.orEmpty().filter { existingKeys.add(it.feedKey()) }
             before.copy(
                 source = source,
-                feed = TodayFeedPage(
+                feed = RecommendedFeedPage(
                     items = existing + appended,
                     hasMore = page?.hasMore ?: before.feed.hasMore,
                 ),
@@ -127,8 +127,8 @@ class TodayViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(article = null, articleLoading = true, articleError = "") }
             runCatchingCancellable {
-                sources.todayArticle(source, topicId).also { article ->
-                    check(article.hasRenderableContent()) { "Today article $topicId has no content" }
+                sources.recommendedArticle(source, topicId).also { article ->
+                    check(article.hasRenderableContent()) { "Recommended article $topicId has no content" }
                 }
             }.onSuccess { article ->
                 if (source != activeSource || generation != sourceGeneration) return@onSuccess
@@ -155,8 +155,8 @@ class TodayViewModel(
     }
 }
 
-private fun TodayArticle.hasRenderableContent(): Boolean =
+private fun RecommendedArticle.hasRenderableContent(): Boolean =
     blocks.isNotEmpty() || headerImage.isNotBlank() || richTextHtml.isNotBlank() || apps.isNotEmpty()
 
-private fun TodayFeaturedItem.feedKey(): String = rId.ifBlank { articleLink }
+private fun RecommendedFeaturedItem.feedKey(): String = rId.ifBlank { articleLink }
 

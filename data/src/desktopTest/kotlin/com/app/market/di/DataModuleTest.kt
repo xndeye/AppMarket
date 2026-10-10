@@ -11,10 +11,10 @@ import com.app.market.domain.repository.MarketSourceRepository
 import com.app.market.domain.repository.OppoRepository
 import com.app.market.domain.repository.PackageRepository
 import com.app.market.domain.repository.ProfileRepository
+import com.app.market.domain.repository.RecommendedRepository
 import com.app.market.domain.repository.SavedPackageRepository
 import com.app.market.domain.repository.SearchHistoryRepository
 import com.app.market.domain.repository.ThemePreferencesRepository
-import com.app.market.domain.repository.TodayRepository
 import com.app.market.domain.repository.UpdateHistoryRepository
 import com.app.market.domain.repository.UpdatePreferencesRepository
 import com.app.market.domain.repository.VivoRepository
@@ -41,7 +41,7 @@ class DataModuleTest {
                 assertNotNull(get<ProfileRepository>())
                 assertNotNull(get<SavedPackageRepository>())
                 assertNotNull(get<SearchHistoryRepository>())
-                assertNotNull(get<TodayRepository>())
+                assertNotNull(get<RecommendedRepository>())
                 assertNotNull(get<ThemePreferencesRepository>())
                 assertNotNull(get<UpdateHistoryRepository>())
                 assertNotNull(get<UpdatePreferencesRepository>())

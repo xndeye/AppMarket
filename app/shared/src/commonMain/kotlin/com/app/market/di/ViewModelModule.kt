@@ -7,10 +7,10 @@ import com.app.market.viewmodel.HistoricalVersionsViewModel
 import com.app.market.viewmodel.IgnoredAppsViewModel
 import com.app.market.viewmodel.InstallerSettingsViewModel
 import com.app.market.viewmodel.ManualUpdateViewModel
+import com.app.market.viewmodel.RecommendedViewModel
 import com.app.market.viewmodel.SavedPackagesViewModel
 import com.app.market.viewmodel.SearchViewModel
 import com.app.market.viewmodel.ThemeSettingsViewModel
-import com.app.market.viewmodel.TodayViewModel
 import com.app.market.viewmodel.UpdateHistoryViewModel
 import com.app.market.viewmodel.UpdatesViewModel
 import org.koin.core.module.dsl.viewModelOf
@@ -29,5 +29,5 @@ val viewModelModule = module {
     viewModelOf(::HistoricalVersionsViewModel)
     viewModelOf(::DeviceProfileViewModel)
     viewModelOf(::AppDetailViewModel)
-    viewModelOf(::TodayViewModel)
+    viewModelOf(::RecommendedViewModel)
 }

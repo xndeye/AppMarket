@@ -63,6 +63,8 @@ import com.app.market.resources.nav_updates
 import com.app.market.resources.no_change_log
 import com.app.market.resources.no_updates
 import com.app.market.resources.num_updates_pending
+import com.app.market.resources.regular_apps
+import com.app.market.resources.system_apps
 import com.app.market.resources.update
 import com.app.market.resources.update_all
 import com.app.market.resources.update_check_failed
@@ -76,6 +78,7 @@ import com.app.market.ui.component.CardSegmentContainer
 import com.app.market.ui.component.LoadingBox
 import com.app.market.ui.component.MainTabScaffold
 import com.app.market.ui.component.PageVerticalPadding
+import com.app.market.ui.component.SectionTitle
 import com.app.market.ui.model.AppActionKind
 import com.app.market.ui.util.appDisplayName
 import com.app.market.ui.util.formatSize
@@ -177,6 +180,11 @@ private fun UpdatesCardList(
     modifier: Modifier
 ) {
     val updateActionText = stringResource(Res.string.update)
+    val regularAppsTitle = stringResource(Res.string.regular_apps)
+    val systemAppsTitle = stringResource(Res.string.system_apps)
+    val (regularApps, systemApps) = remember(updates) {
+        updates.partition { !it.isSystemApp }
+    }
     val totalUpdateSize = remember(updates) {
         updates.sumOf { app -> app.deltaSize.takeIf { it > 0 } ?: app.apkSize }
     }
@@ -184,12 +192,15 @@ private fun UpdatesCardList(
         state = listState,
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(0.dp),
-        contentPadding = listPadding,
+        contentPadding = PaddingValues(
+            top = listPadding.calculateTopPadding(),
+            bottom = listPadding.calculateBottomPadding(),
+        ),
     ) {
         item(key = "summary") {
             Card(
                 modifier = Modifier
-                    .padding(bottom = 20.dp)
+                    .padding(horizontal = 12.dp)
                     .fillMaxWidth(),
                 insideMargin = PaddingValues(16.dp),
             ) {
@@ -224,30 +235,36 @@ private fun UpdatesCardList(
                 }
             }
         }
-        itemsIndexed(updates, key = { _, app -> app.packageName }) { index, app ->
-            val packageName = app.packageName
-            val downloadState by remember(packageName) {
-                derivedStateOf { downloadStates.value[packageName] }
+        listOf(regularAppsTitle to regularApps, systemAppsTitle to systemApps)
+            .forEachIndexed { sectionIndex, (title, apps) ->
+                if (apps.isEmpty()) return@forEachIndexed
+                item(key = "updates-section-$sectionIndex") {
+                    SectionTitle(text = title)
+                }
+                itemsIndexed(apps, key = { _, app -> app.packageName }) { index, app ->
+                    val packageName = app.packageName
+                    val downloadState by remember(packageName) {
+                        derivedStateOf { downloadStates.value[packageName] }
+                    }
+                    CardSegmentContainer(
+                        isFirst = index == 0,
+                        isLast = index == apps.lastIndex,
+                        modifier = Modifier.animateItem(placementSpec = null),
+                    ) {
+                        UpdateItemRow(
+                            app = app,
+                            downloadState = downloadState,
+                            onOpenDetail = { onOpenDetail(app) },
+                            onAction = { viewModel.download(app) },
+                            onInstallDownloaded = viewModel::installDownloaded,
+                            onCancel = viewModel::cancelDownload,
+                            onIgnoreOnce = { viewModel.ignoreOnce(app) },
+                            onIgnorePermanent = { viewModel.ignorePermanently(app) },
+                            actionText = updateActionText,
+                        )
+                    }
+                }
             }
-            CardSegmentContainer(
-                isFirst = index == 0,
-                isLast = index == updates.lastIndex,
-                modifier = Modifier.animateItem(placementSpec = null),
-                horizontalPadding = 0.dp,
-            ) {
-                UpdateItemRow(
-                    app = app,
-                    downloadState = downloadState,
-                    onOpenDetail = { onOpenDetail(app) },
-                    onAction = { viewModel.download(app) },
-                    onInstallDownloaded = viewModel::installDownloaded,
-                    onCancel = viewModel::cancelDownload,
-                    onIgnoreOnce = { viewModel.ignoreOnce(app) },
-                    onIgnorePermanent = { viewModel.ignorePermanently(app) },
-                    actionText = updateActionText,
-                )
-            }
-        }
     }
 }
 

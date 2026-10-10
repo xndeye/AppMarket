@@ -44,7 +44,7 @@ data class SearchUiState(
     val activeKeyword: String = "",
     val paging: Map<AppSource, SourcePaging> = emptyMap(),
     val loadingMore: Boolean = false,
-    /** Bumps on every completed search; used to invalidate an in-flight page load and reset scroll. */
+    /** 新搜索或清空输入时递增，使旧翻页请求失效并重置列表位置。 */
     val searchEpoch: Int = 0,
     val sources: Set<AppSource> = AppSource.Default,
 ) {
@@ -120,6 +120,7 @@ class SearchViewModel(
                     activeKeyword = "",
                     paging = emptyMap(),
                     loadingMore = false,
+                    searchEpoch = it.searchEpoch + 1,
                 )
             }
         } else {
@@ -127,31 +128,10 @@ class SearchViewModel(
         }
     }
 
-    fun clearSearch() {
-        // Cancel the in-flight search and drop loading; else the spinner stays up and the late result
-        // repopulates the just-cancelled search.
-        searchJob?.cancel()
-        searchJob = null
-        _uiState.update {
-            it.copy(
-                keyword = "",
-                loading = false,
-                results = emptyList(),
-                showNoResults = false,
-                errorMessage = "",
-                selectedHistory = null,
-                activeKeyword = "",
-                paging = emptyMap(),
-                loadingMore = false,
-            )
-        }
-    }
-
     fun selectHistory(keyword: String?) = _uiState.update { it.copy(selectedHistory = keyword) }
 
-    fun selectSource(source: AppSource) {
-        if (_uiState.value.sources == setOf(source)) return
-        viewModelScope.launch { updatePrefs.setSearchSources(setOf(source)) }
+    fun selectSource(source: AppSource): Job = viewModelScope.launch {
+        updatePrefs.setSearchSources(setOf(source))
     }
 
     fun searchWith(keyword: String) {
@@ -182,6 +162,7 @@ class SearchViewModel(
                 results = if (keepResults) it.results else emptyList(),
                 activeKeyword = keyword,
                 paging = if (keepResults) it.paging else emptyMap(),
+                searchEpoch = it.searchEpoch + 1,
             )
         }
         if (recordHistory) {
@@ -208,7 +189,6 @@ class SearchViewModel(
                     activeKeyword = keyword,
                     paging = pagingOf(fetched, pages = sources.associateWith { 0 }),
                     showNoResults = items.isEmpty(),
-                    searchEpoch = it.searchEpoch + 1,
                 )
             }
         }

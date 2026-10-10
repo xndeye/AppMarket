@@ -7,9 +7,9 @@ import com.app.market.domain.model.market.AppSource
 import com.app.market.domain.model.market.MarketAppInfo
 import com.app.market.domain.model.market.SearchPage
 import com.app.market.domain.model.preference.HomePage
-import com.app.market.domain.model.today.TodayArticle
-import com.app.market.domain.model.today.TodayFeaturedItem
-import com.app.market.domain.model.today.TodayFeedPage
+import com.app.market.domain.model.recommended.RecommendedArticle
+import com.app.market.domain.model.recommended.RecommendedFeaturedItem
+import com.app.market.domain.model.recommended.RecommendedFeedPage
 import com.app.market.domain.model.update.IgnoredUpdate
 import com.app.market.domain.model.update.ManualUpdateRequest
 import com.app.market.domain.model.update.ManualUpdateResult
@@ -30,20 +30,20 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class TodayViewModelSourceSwitchTest {
+class RecommendedViewModelSourceSwitchTest {
     @Test
-    fun changingTodaySourceReplacesTheAwardFeed() = runTest {
+    fun changingRecommendedSourceReplacesTheAwardFeed() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {
-            val preferences = FakePreferences(today = AppSource.OPPO)
+            val preferences = FakePreferences(recommended = AppSource.OPPO)
             val repository = FakeMarketSourceRepository()
-            val viewModel = TodayViewModel(repository, preferences)
+            val viewModel = RecommendedViewModel(repository, preferences)
 
             advanceUntilIdle()
             assertEquals("OPPO", viewModel.uiState.value.feed.items.single().title)
             assertEquals(AppSource.OPPO, viewModel.uiState.value.source)
 
-            preferences.setTodaySource(AppSource.VIVO)
+            preferences.setRecommendedSource(AppSource.VIVO)
             advanceUntilIdle()
 
             assertEquals("VIVO", viewModel.uiState.value.feed.items.single().title)
@@ -55,12 +55,12 @@ class TodayViewModelSourceSwitchTest {
     }
 
     @Test
-    fun explicitTodaySourceIgnoresSearchSourceChanges() = runTest {
+    fun explicitRecommendedSourceIgnoresSearchSourceChanges() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {
-            val preferences = FakePreferences(today = AppSource.OPPO)
+            val preferences = FakePreferences(recommended = AppSource.OPPO)
             val repository = FakeMarketSourceRepository()
-            val viewModel = TodayViewModel(repository, preferences)
+            val viewModel = RecommendedViewModel(repository, preferences)
 
             advanceUntilIdle()
             assertEquals("OPPO", viewModel.uiState.value.feed.items.single().title)
@@ -79,11 +79,11 @@ class TodayViewModelSourceSwitchTest {
 private class FakeMarketSourceRepository : MarketSourceRepository {
     val feedSources = mutableListOf<AppSource>()
 
-    override suspend fun goldMiFeed(source: AppSource, page: Int, pageSize: Int): TodayFeedPage {
+    override suspend fun goldMiFeed(source: AppSource, page: Int, pageSize: Int): RecommendedFeedPage {
         feedSources += source
-        return TodayFeedPage(
+        return RecommendedFeedPage(
             items = listOf(
-                TodayFeaturedItem(
+                RecommendedFeaturedItem(
                     rId = source.token,
                     title = source.name,
                     summary = "",
@@ -111,14 +111,15 @@ private class FakeMarketSourceRepository : MarketSourceRepository {
     override suspend fun loadReconciledCachedUpdates(): List<MarketAppInfo> = error("Not used")
     override fun checkUpdatesFlow(source: AppSource): Flow<List<MarketAppInfo>> = emptyFlow()
     override suspend fun checkManualUpdate(source: AppSource, request: ManualUpdateRequest): ManualUpdateResult = error("Not used")
-    override suspend fun todayArticle(source: AppSource, rId: String): TodayArticle = error("Not used")
+    override suspend fun recommendedArticle(source: AppSource, rId: String): RecommendedArticle = error("Not used")
 }
 
 private class FakePreferences(
-    today: AppSource = AppSource.XIAOMI,
+    recommended: AppSource = AppSource.XIAOMI,
 ) : UpdatePreferencesRepository {
     override val initialized = MutableStateFlow(true)
     override val showSystemUpdates = MutableStateFlow(true)
+    override val showRecommendedUpdates = MutableStateFlow(true)
     override val removeSearchAds = MutableStateFlow(false)
     override val filterQuickGames = MutableStateFlow(false)
     override val filterReservationApps = MutableStateFlow(false)
@@ -126,15 +127,19 @@ private class FakePreferences(
     override val showSameDeveloper = MutableStateFlow(false)
     override val showPromotions = MutableStateFlow(false)
     override val stripAppNameSubtitle = MutableStateFlow(false)
-    override val homePage = MutableStateFlow(HomePage.TODAY)
+    override val homePage = MutableStateFlow(HomePage.RECOMMENDED)
     override val searchSources = MutableStateFlow(setOf(AppSource.XIAOMI))
-    override val todaySource = MutableStateFlow(today)
+    override val recommendedSource = MutableStateFlow(recommended)
     override val updateSource = MutableStateFlow(AppSource.XIAOMI)
     override val permanentIgnores: StateFlow<List<IgnoredUpdate>> = MutableStateFlow(emptyList())
     override val onceIgnores: StateFlow<List<IgnoredUpdate>> = MutableStateFlow(emptyList())
 
     override suspend fun setShowSystemUpdates(value: Boolean) {
         showSystemUpdates.value = value
+    }
+
+    override suspend fun setShowRecommendedUpdates(value: Boolean) {
+        showRecommendedUpdates.value = value
     }
 
     override suspend fun setRemoveSearchAds(value: Boolean) {
@@ -173,8 +178,8 @@ private class FakePreferences(
         searchSources.value = value
     }
 
-    override suspend fun setTodaySource(value: AppSource) {
-        todaySource.value = value
+    override suspend fun setRecommendedSource(value: AppSource) {
+        recommendedSource.value = value
     }
 
     override suspend fun setUpdateSource(value: AppSource) {

@@ -6,6 +6,7 @@ import com.app.market.data.local.StringPreferenceKey
 object UpdatePreferenceKeys {
     private const val NS = "update_preferences"
     val ShowSystemUpdates = BooleanPreferenceKey(NS, "show_system_updates", true)
+    val ShowRecommendedUpdates = BooleanPreferenceKey(NS, "show_recommended_updates", true)
     val RemoveSearchAds = BooleanPreferenceKey(NS, "remove_search_ads")
     val FilterQuickGames = BooleanPreferenceKey(NS, "filter_quick_games")
     val FilterReservationApps = BooleanPreferenceKey(NS, "filter_reservation_apps")
@@ -15,7 +16,8 @@ object UpdatePreferenceKeys {
     val ShowPromotions = BooleanPreferenceKey(NS, "show_promotions")
     val HomePage = StringPreferenceKey(NS, "home_page")
     val SearchSources = StringPreferenceKey(NS, "search_sources")
-    val TodaySource = StringPreferenceKey(NS, "today_source")
+    // 保留已有推荐来源的存储键。
+    val RecommendedSource = StringPreferenceKey(NS, "today_source")
     val UpdateSource = StringPreferenceKey(NS, "update_source")
     val PermanentIgnores = StringPreferenceKey(NS, "permanent_ignores")
     val OnceIgnores = StringPreferenceKey(NS, "once_ignores")

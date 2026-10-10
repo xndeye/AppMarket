@@ -22,10 +22,10 @@ import com.app.market.domain.model.market.ScreenshotOrientation
 import com.app.market.domain.model.market.SearchPage
 import com.app.market.domain.model.market.hasInstalledSplits
 import com.app.market.domain.model.profile.MarketProfile
-import com.app.market.domain.model.today.TodayArticle
-import com.app.market.domain.model.today.TodayArticleBlock
-import com.app.market.domain.model.today.TodayFeaturedItem
-import com.app.market.domain.model.today.TodayFeedPage
+import com.app.market.domain.model.recommended.RecommendedArticle
+import com.app.market.domain.model.recommended.RecommendedArticleBlock
+import com.app.market.domain.model.recommended.RecommendedFeaturedItem
+import com.app.market.domain.model.recommended.RecommendedFeedPage
 import com.app.market.domain.model.update.ManualUpdateRequest
 import com.app.market.domain.model.update.ManualUpdateResult
 import com.app.market.domain.model.update.ManualUpdateStatus
@@ -34,7 +34,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 
-private val todayImageTag = Regex(
+private val recommendedImageTag = Regex(
     """<img\b[^>]*\bsrc\s*=\s*["']([^"']+)["'][^>]*>""",
     RegexOption.IGNORE_CASE,
 )
@@ -740,11 +740,11 @@ internal class XiaomiApi(
         pageSize: Int,
         profile: MarketProfile,
         cookie: String,
-    ): TodayFeedPage {
+    ): RecommendedFeedPage {
         require(page >= 0) { "page must be non-negative" }
         require(pageSize > 0) { "pageSize must be positive" }
         val params = commonParams(profile).toMutableMap()
-        params.putAll(todayCommonParams())
+        params.putAll(recommendedCommonParams())
         params.putAll(
             mapOf(
                 "page" to page.toString(),
@@ -758,28 +758,29 @@ internal class XiaomiApi(
     }
 
     /**
-     * A single Today article (`@GET topic/detail`). The body arrives as `list[0].data.topicItemList`
-     * (banner + rich-text + app blocks); [parseTodayArticle] flattens it into [TodayArticle].
+     * 通过 `topic/detail` 加载推荐文章，正文位于 `list[0].data.topicItemList`。
+     * [parseRecommendedArticle] 将头图、富文本和应用区块解析为 [RecommendedArticle]。
      */
-    suspend fun todayArticle(rId: String, profile: MarketProfile, cookie: String): TodayArticle {
+    suspend fun recommendedArticle(rId: String, profile: MarketProfile, cookie: String): RecommendedArticle {
         val params = commonParams(profile).toMutableMap()
-        params.putAll(todayCommonParams())
+        params.putAll(recommendedCommonParams())
         params["rId"] = rId
         val json = parseJsonObject(http.get(XiaomiSigner.signedUrl("$MARKET/topic/detail?${query(params)}"), cookie))
-        return parseTodayArticle(rId, json)
+        return parseRecommendedArticle(rId, json)
     }
 
-    /** Shared H5-to-Native params the Today tab pages send (mirrors the client's base params). */
-    private fun todayCommonParams(): Map<String, String> = mapOf(
+    /** 推荐页共用的 H5 转原生请求参数，与商店客户端保持一致。 */
+    private fun recommendedCommonParams(): Map<String, String> = mapOf(
         "bottomTab" to "true", "feReload" to "false", "isNewUI" to "true",
         "native" to "1", "suggestV" to "1", "supportSlide" to "1", "minacompatible" to "1",
         "pageRef" to "com.xiaomi.market", "sourcePackage" to "com.xiaomi.market",
+        // 小米接口要求使用原始来源标识。
         "previousFromRef" to "today",
     )
 
-    internal fun parseGoldMiFeed(json: JsonObject): TodayFeedPage {
-        val components = json.arr("list") ?: return TodayFeedPage(emptyList(), json.bool("hasMore"))
-        val items = mutableListOf<TodayFeaturedItem>()
+    internal fun parseGoldMiFeed(json: JsonObject): RecommendedFeedPage {
+        val components = json.arr("list") ?: return RecommendedFeedPage(emptyList(), json.bool("hasMore"))
+        val items = mutableListOf<RecommendedFeaturedItem>()
         for (componentIndex in 0 until components.len) {
             val data = components.objAt(componentIndex)?.obj("data") ?: continue
             val apps = data.arr("listApp") ?: continue
@@ -789,84 +790,84 @@ internal class XiaomiApi(
                 val app = parseAppOrNull(item)?.let { parsed ->
                     if (parsed.openLink.isNotBlank() || clickUrl.isBlank()) parsed else parsed.copy(openLink = clickUrl)
                 } ?: continue
-                items += TodayFeaturedItem(
+                items += RecommendedFeaturedItem(
                     rId = queryParam(clickUrl, "rId").ifBlank { item.str("rId") },
                     title = data.str("title").ifBlank { data.str("linkTitle") }
                         .ifBlank { item.str("card_title") }
                         .ifBlank { app.displayName },
                     summary = item.str("description"),
-                    coverImage = normalizeTodayMediaUrl(item.str("imgUrl"), "l720q90"),
+                    coverImage = normalizeRecommendedMediaUrl(item.str("imgUrl"), "l720q90"),
                     app = app,
                     articleLink = clickUrl,
                 )
             }
         }
         val distinct = items.distinctBy { it.app?.packageName ?: it.rId.ifBlank { it.articleLink } }
-        return TodayFeedPage(distinct, json.bool("hasMore", distinct.isNotEmpty()))
+        return RecommendedFeedPage(distinct, json.bool("hasMore", distinct.isNotEmpty()))
     }
 
-    internal fun parseTodayArticle(rId: String, json: JsonObject): TodayArticle {
+    internal fun parseRecommendedArticle(rId: String, json: JsonObject): RecommendedArticle {
         val data = json.arr("list").objAt(0).obj("data")
         val items = data.arr("topicItemList") ?: JsonArray(emptyList())
-        val blocks = mutableListOf<TodayArticleBlock>()
+        val blocks = mutableListOf<RecommendedArticleBlock>()
         for (i in 0 until items.len) {
             val item = items.objAt(i) ?: continue
             when (item.str("topicItemType")) {
-                "topicBanner" -> parseTodayBanner(item)?.let(blocks::add)
-                "topicRichText" -> parseTodayRichText(item)?.let(blocks::add)
-                "topicApp" -> parseAppOrNull(item)?.let { blocks += TodayArticleBlock.App(it) }
-                "topicImage" -> parseTodayImage(item)?.let(blocks::add)
+                "topicBanner" -> parseRecommendedBanner(item)?.let(blocks::add)
+                "topicRichText" -> parseRecommendedRichText(item)?.let(blocks::add)
+                "topicApp" -> parseAppOrNull(item)?.let { blocks += RecommendedArticleBlock.App(it) }
+                "topicImage" -> parseRecommendedImage(item)?.let(blocks::add)
                 else -> {
                     when {
                         item.str("packageName").isNotBlank() ->
-                            parseAppOrNull(item)?.let { blocks += TodayArticleBlock.App(it) }
+                            parseAppOrNull(item)?.let { blocks += RecommendedArticleBlock.App(it) }
 
                         item.obj("richTextInfo").str("desc").isNotBlank() ||
                                 item.str("desc").isNotBlank() || item.str("content").isNotBlank() ->
-                            parseTodayRichText(item)?.let(blocks::add)
+                            parseRecommendedRichText(item)?.let(blocks::add)
 
-                        else -> parseTodayImage(item)?.let(blocks::add)
+                        else -> parseRecommendedImage(item)?.let(blocks::add)
                     }
                 }
             }
         }
 
-        if (blocks.none { it is TodayArticleBlock.Banner }) {
+        if (blocks.none { it is RecommendedArticleBlock.Banner }) {
             val fallbackBanner = data.obj("bannerInfo").str("banner")
                 .ifBlank { data.str("banner") }
                 .ifBlank { data.str("thumbnail") }
                 .ifBlank { data.str("mticon") }
                 .ifBlank { data.str("webViewPic") }
-            normalizeTodayMediaUrl(fallbackBanner, "q90")
+            normalizeRecommendedMediaUrl(fallbackBanner, "q90")
                 .takeIf(String::isNotBlank)
                 ?.let {
                     blocks.add(
                         0,
-                        TodayArticleBlock.Banner(
+                        RecommendedArticleBlock.Banner(
                             imageUrl = it,
                             // 与 feed 封面同规格，头图占位可直接命中缓存
-                            previewImageUrl = normalizeTodayMediaUrl(fallbackBanner, "l720q90"),
+                            previewImageUrl = normalizeRecommendedMediaUrl(fallbackBanner, "l720q90"),
                         ),
                     )
                 }
         }
 
-        if (blocks.none { it is TodayArticleBlock.App }) {
-            data.obj("appInfo")?.let(::parseAppOrNull)?.let { blocks += TodayArticleBlock.App(it) }
+        if (blocks.none { it is RecommendedArticleBlock.App }) {
+            data.obj("appInfo")?.let(::parseAppOrNull)?.let { blocks += RecommendedArticleBlock.App(it) }
             listOf(data.arr("listApp"), data.arr("appList")).forEach { appList ->
                 for (i in 0 until appList.len) {
-                    appList.objAt(i)?.let(::parseAppOrNull)?.let { blocks += TodayArticleBlock.App(it) }
+                    appList.objAt(i)?.let(::parseAppOrNull)?.let { blocks += RecommendedArticleBlock.App(it) }
                 }
             }
         }
 
-        val headerBanner = blocks.filterIsInstance<TodayArticleBlock.Banner>().firstOrNull()
-        val richText = blocks.filterIsInstance<TodayArticleBlock.RichText>()
-            .joinToString("\n\n", transform = TodayArticleBlock.RichText::html)
-        val apps = blocks.filterIsInstance<TodayArticleBlock.App>()
-            .map(TodayArticleBlock.App::value)
+        val headerBanner = blocks.filterIsInstance<RecommendedArticleBlock.Banner>().firstOrNull()
+        val richText = blocks.filterIsInstance<RecommendedArticleBlock.RichText>()
+            .joinToString("\n\n", transform = RecommendedArticleBlock.RichText::html)
+        val apps = blocks.filterIsInstance<RecommendedArticleBlock.App>()
+            .map(RecommendedArticleBlock.App::value)
             .distinctBy(MarketAppInfo::packageName)
-        return TodayArticle(
+        return RecommendedArticle(
             rId = rId,
             title = data.str("title")
                 .ifBlank { data.str("detailTitle") }
@@ -881,43 +882,43 @@ internal class XiaomiApi(
         )
     }
 
-    private fun parseTodayBanner(item: JsonObject): TodayArticleBlock.Banner? {
+    private fun parseRecommendedBanner(item: JsonObject): RecommendedArticleBlock.Banner? {
         val info = item.obj("bannerInfo")
         val image = info.str("banner")
             .ifBlank { item.str("banner") }
             .ifBlank { item.str("mticon") }
             .ifBlank { item.str("webViewPic") }
             .ifBlank { item.str("imgUrl") }
-        val url = normalizeTodayMediaUrl(image, "q90")
+        val url = normalizeRecommendedMediaUrl(image, "q90")
         if (url.isBlank()) return null
-        return TodayArticleBlock.Banner(
+        return RecommendedArticleBlock.Banner(
             imageUrl = url,
             width = info.int("bannerWidthForDisplay", item.int("width")),
             height = info.int("bannerHeightForDisplay", item.int("height")),
             // 与 feed 封面同规格，头图占位可直接命中缓存
-            previewImageUrl = normalizeTodayMediaUrl(image, "l720q90"),
+            previewImageUrl = normalizeRecommendedMediaUrl(image, "l720q90"),
         )
     }
 
-    private fun parseTodayRichText(item: JsonObject): TodayArticleBlock.RichText? {
+    private fun parseRecommendedRichText(item: JsonObject): RecommendedArticleBlock.RichText? {
         val html = item.obj("richTextInfo").str("desc")
             .ifBlank { item.str("desc") }
             .ifBlank { item.str("content") }
         if (html.isBlank()) return null
 
         val imageUrls = mutableListOf<String>()
-        val normalizedHtml = todayImageTag.replace(html) { match ->
+        val normalizedHtml = recommendedImageTag.replace(html) { match ->
             val source = match.groups[1] ?: return@replace match.value
-            val normalizedUrl = normalizeTodayMediaUrl(source.value, "w1000q80")
+            val normalizedUrl = normalizeRecommendedMediaUrl(source.value, "w1000q80")
             imageUrls += normalizedUrl
             val start = source.range.first - match.range.first
             val end = source.range.last - match.range.first + 1
             match.value.replaceRange(start, end, normalizedUrl)
         }
-        return TodayArticleBlock.RichText(normalizedHtml, imageUrls)
+        return RecommendedArticleBlock.RichText(normalizedHtml, imageUrls)
     }
 
-    private fun parseTodayImage(item: JsonObject): TodayArticleBlock.Image? {
+    private fun parseRecommendedImage(item: JsonObject): RecommendedArticleBlock.Image? {
         val info = item.obj("imageInfo")
         val image = info.str("image")
             .ifBlank { info.str("url") }
@@ -925,16 +926,16 @@ internal class XiaomiApi(
             .ifBlank { item.str("imgUrl") }
             .ifBlank { item.str("mticon") }
             .ifBlank { item.str("webViewPic") }
-        val url = normalizeTodayMediaUrl(image, "q90")
+        val url = normalizeRecommendedMediaUrl(image, "q90")
         if (url.isBlank()) return null
-        return TodayArticleBlock.Image(
+        return RecommendedArticleBlock.Image(
             imageUrl = url,
             width = info.int("width", item.int("width")),
             height = info.int("height", item.int("height")),
         )
     }
 
-    private fun normalizeTodayMediaUrl(path: String, spec: String): String {
+    private fun normalizeRecommendedMediaUrl(path: String, spec: String): String {
         val url = when {
             path.startsWith("//") -> "https:$path"
             else -> imageUrl(path, spec)

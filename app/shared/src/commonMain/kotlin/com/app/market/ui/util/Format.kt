@@ -34,14 +34,14 @@ fun formatCount(count: Long): String = when {
     else -> oneDecimal(count, YI) + "亿"
 }
 
-/** 「今日」应用卡片副标题，优先展示商店分类和安装次数。 */
-fun MarketAppInfo.todayAppSummary(): String = buildList {
+/** 「推荐」应用卡片副标题，优先展示商店分类和安装次数。 */
+fun MarketAppInfo.recommendedAppSummary(): String = buildList {
     category.trim().takeIf(String::isNotBlank)?.let(::add)
     formatCount(downloadCount).takeIf(String::isNotBlank)?.let { add("${it}次安装") }
 }.joinToString(" | ").ifBlank { publisherName.ifBlank { packageName } }
 
-/** 今日奖项标签：标题已经是应用名时不重复显示应用名。 */
-fun todayAwardLabel(awardName: String, title: String, appName: String?): String {
+/** 推荐奖项标签：标题已经是应用名时不重复显示应用名。 */
+fun recommendedAwardLabel(awardName: String, title: String, appName: String?): String {
     val normalizedTitle = title.trim()
     return if (normalizedTitle.isBlank() || normalizedTitle == appName?.trim()) {
         awardName

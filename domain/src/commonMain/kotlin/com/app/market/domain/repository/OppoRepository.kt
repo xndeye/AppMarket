@@ -4,8 +4,8 @@ import com.app.market.domain.model.download.DownloadMeta
 import com.app.market.domain.model.market.AppDetail
 import com.app.market.domain.model.market.MarketAppInfo
 import com.app.market.domain.model.market.SearchPage
-import com.app.market.domain.model.today.TodayArticle
-import com.app.market.domain.model.today.TodayFeedPage
+import com.app.market.domain.model.recommended.RecommendedArticle
+import com.app.market.domain.model.recommended.RecommendedFeedPage
 import com.app.market.domain.model.update.ManualUpdateRequest
 import com.app.market.domain.model.update.ManualUpdateResult
 
@@ -23,7 +23,7 @@ interface OppoRepository {
 
     suspend fun checkManualUpdate(request: ManualUpdateRequest): ManualUpdateResult
 
-    suspend fun beautyFeed(page: Int = 0, pageSize: Int = 10): TodayFeedPage
+    suspend fun beautyFeed(page: Int = 0, pageSize: Int = 10): RecommendedFeedPage
 
-    suspend fun beautyArticle(snippetId: String): TodayArticle
+    suspend fun beautyArticle(snippetId: String): RecommendedArticle
 }

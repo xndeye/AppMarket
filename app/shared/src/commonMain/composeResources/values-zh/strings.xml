@@ -5,7 +5,7 @@
     <string name="nav_updates">更新</string>
     <string name="nav_search">搜索</string>
     <string name="nav_settings">设置</string>
-    <string name="nav_today">推荐</string>
+    <string name="nav_recommended">推荐</string>
 
     <!-- Common -->
     <string name="back">返回</string>
@@ -20,11 +20,10 @@
     <string name="view">查看</string>
     <string name="view_more">更多</string>
 
-    <!-- Today -->
+    <!-- 推荐 -->
     <string name="featured">精选</string>
     <string name="recommended">推荐</string>
     <string name="golden_award">金米奖</string>
-    <string name="today_home">首页</string>
 
     <!-- Actions -->
     <string name="install">安装</string>
@@ -49,6 +48,8 @@
     <string name="updates_title">应用更新</string>
     <string name="check_updates">检查更新</string>
     <string name="available_updates">可更新应用</string>
+    <string name="regular_apps">普通应用</string>
+    <string name="system_apps">系统应用</string>
     <string name="num_updates_pending">%1$d 个应用待更新</string>
     <string name="update_all">全部更新</string>
     <string name="show_system_apps">显示系统应用</string>
@@ -92,6 +93,8 @@
     <string name="theme_page_scale_range">80% - 110%</string>
     <string name="home_page">首页</string>
     <string name="home_page_summary">启动时打开的页面</string>
+    <string name="show_recommended_updates">推荐页更新横幅</string>
+    <string name="show_recommended_updates_summary">在推荐页显示待更新应用及更新入口</string>
     <string name="remove_search_ads">去除推广应用</string>
     <string name="remove_search_ads_summary">对当前搜索来源生效，隐藏标记为推广的结果</string>
     <string name="filter_quick_games">去除快应用</string>
@@ -106,8 +109,8 @@
     <string name="search_sources_summary">搜索和应用详情的默认来源，可在结果页切换</string>
     <string name="update_source">更新来源</string>
     <string name="update_source_summary">用于检查应用更新</string>
-    <string name="today_source">推荐来源</string>
-    <string name="today_source_summary">用于推荐页的内容</string>
+    <string name="recommended_source">推荐来源</string>
+    <string name="recommended_source_summary">用于推荐页的内容</string>
     <string name="source_xiaomi">小米</string>
     <string name="source_vivo">VIVO</string>
     <string name="source_wandoujia">豌豆荚</string>

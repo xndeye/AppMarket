@@ -17,8 +17,8 @@ import com.app.market.domain.model.market.ScreenshotOrientation
 import com.app.market.domain.model.market.SearchPage
 import com.app.market.domain.model.profile.MarketProfile
 import com.app.market.domain.model.profile.OppoStoreRegion
-import com.app.market.domain.model.today.TodayArticle
-import com.app.market.domain.model.today.TodayFeedPage
+import com.app.market.domain.model.recommended.RecommendedArticle
+import com.app.market.domain.model.recommended.RecommendedFeedPage
 import com.app.market.domain.model.update.ManualUpdateRequest
 import com.app.market.domain.repository.ProfileRepository
 import io.ktor.client.HttpClient
@@ -238,7 +238,7 @@ internal class OppoApi(
         )
     }
 
-    suspend fun beautyFeed(page: Int, pageSize: Int): TodayFeedPage {
+    suspend fun beautyFeed(page: Int, pageSize: Int): RecommendedFeedPage {
         require(page >= 0) { "page must be non-negative" }
         require(pageSize > 0) { "pageSize must be positive" }
         val profile = profileStore.load(AppSource.OPPO)
@@ -259,7 +259,7 @@ internal class OppoApi(
         return parseOppoBeautyFeed(response, pageSize)
     }
 
-    suspend fun beautyArticle(snippetId: String): TodayArticle {
+    suspend fun beautyArticle(snippetId: String): RecommendedArticle {
         val id = snippetId.toLongOrNull()?.takeIf { it > 0L }
             ?: throw MarketException("OPPO 至美奖文章 ID 无效")
         val profile = profileStore.load(AppSource.OPPO)

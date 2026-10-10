@@ -15,10 +15,10 @@ import com.app.market.domain.model.market.AppSource
 import com.app.market.domain.model.market.MarketAppInfo
 import com.app.market.domain.model.market.ScreenshotOrientation
 import com.app.market.domain.model.market.SearchPage
-import com.app.market.domain.model.today.TodayArticle
-import com.app.market.domain.model.today.TodayArticleBlock
-import com.app.market.domain.model.today.TodayFeaturedItem
-import com.app.market.domain.model.today.TodayFeedPage
+import com.app.market.domain.model.recommended.RecommendedArticle
+import com.app.market.domain.model.recommended.RecommendedArticleBlock
+import com.app.market.domain.model.recommended.RecommendedFeaturedItem
+import com.app.market.domain.model.recommended.RecommendedFeedPage
 import com.app.market.domain.model.update.ManualUpdateRequest
 import com.app.market.domain.model.update.ManualUpdateResult
 import com.app.market.domain.model.update.ManualUpdateStatus
@@ -68,17 +68,17 @@ internal class TapTapRepositoryImpl(
         )
     }
 
-    override suspend fun todayFeed(page: Int, pageSize: Int): TodayFeedPage = withContext(Dispatchers.Default) {
+    override suspend fun recommendedFeed(page: Int, pageSize: Int): RecommendedFeedPage = withContext(Dispatchers.Default) {
         val (recommendations, hasMore) = api.recommendations(page, pageSize)
         recommendations.forEach { recommendationsById[it.appId] = it }
         val records = api.apps(recommendations.map(TapTapRecommendationRecord::packageName))
         records.forEach(::remember)
         val recordsByPackage = records.associateBy { it.packageName.lowercase() }
-        TodayFeedPage(
+        RecommendedFeedPage(
             items = recommendations.map { recommendation ->
                 val app = recordsByPackage[recommendation.packageName.lowercase()]?.toApp()
                     ?: recommendation.toFallbackApp()
-                TodayFeaturedItem(
+                RecommendedFeaturedItem(
                     rId = recommendation.appId.toString(),
                     title = recommendation.displayName,
                     summary = recommendation.recommendation.ifBlank { recommendation.description },
@@ -92,7 +92,7 @@ internal class TapTapRepositoryImpl(
         )
     }
 
-    override suspend fun todayArticle(rId: String): TodayArticle = withContext(Dispatchers.Default) {
+    override suspend fun recommendedArticle(rId: String): RecommendedArticle = withContext(Dispatchers.Default) {
         val appId = rId.toLongOrNull()?.takeIf { it > 0L }
             ?: throw MarketException("TapTap 推荐应用 id 无效")
         val detail = api.detail(appId)
@@ -105,7 +105,7 @@ internal class TapTapRepositoryImpl(
             .orEmpty()
             .ifBlank { detail.screenshots.firstOrNull()?.url.orEmpty() }
         val descriptionHtml = escapeHtml(detail.app.description).replace("\n", "<br>")
-        TodayArticle(
+        RecommendedArticle(
             rId = appId.toString(),
             title = merged.displayName,
             awardName = TapTapRecommendationLabel,
@@ -115,22 +115,22 @@ internal class TapTapRepositoryImpl(
             apps = listOf(app),
             blocks = buildList {
                 if (header.isNotBlank()) {
-                    add(TodayArticleBlock.Banner(header))
-                    // 今日文章页会去掉正文首尾装饰图；用头图作边界以保留全部应用截图。
-                    add(TodayArticleBlock.Image(header))
+                    add(RecommendedArticleBlock.Banner(header))
+                    // 推荐文章页会去掉正文首尾装饰图；用头图作边界以保留全部应用截图。
+                    add(RecommendedArticleBlock.Image(header))
                 }
-                if (descriptionHtml.isNotBlank()) add(TodayArticleBlock.RichText(descriptionHtml))
+                if (descriptionHtml.isNotBlank()) add(RecommendedArticleBlock.RichText(descriptionHtml))
                 detail.screenshots.forEach { screenshot ->
                     add(
-                        TodayArticleBlock.Image(
+                        RecommendedArticleBlock.Image(
                             imageUrl = screenshot.url,
                             width = screenshot.width.toInt(),
                             height = screenshot.height.toInt(),
                         )
                     )
                 }
-                if (header.isNotBlank()) add(TodayArticleBlock.Image(header))
-                add(TodayArticleBlock.App(app))
+                if (header.isNotBlank()) add(RecommendedArticleBlock.Image(header))
+                add(RecommendedArticleBlock.App(app))
             },
         )
     }

@@ -50,22 +50,22 @@ import com.app.market.domain.model.preference.HomePage
 import com.app.market.domain.repository.ThemePreferencesRepository
 import com.app.market.platform.UiPlatform
 import com.app.market.resources.Res
+import com.app.market.resources.nav_recommended
 import com.app.market.resources.nav_settings
-import com.app.market.resources.nav_today
 import com.app.market.resources.nav_updates
 import com.app.market.ui.component.FloatingBottomBar
 import com.app.market.ui.component.FloatingBottomBarItem
 import com.app.market.ui.component.blur.BlurredBar
 import com.app.market.ui.component.blur.rememberBlurBackdrop
+import com.app.market.ui.screen.RecommendedTab
 import com.app.market.ui.screen.SettingsTab
-import com.app.market.ui.screen.TodayTab
 import com.app.market.ui.screen.UpdatesTab
 import com.app.market.ui.theme.LocalEnableFloatingBottomBar
 import com.app.market.ui.theme.LocalEnableFloatingBottomBarBlur
 import com.app.market.ui.theme.LocalEnableNavigationBadge
 import com.app.market.ui.util.rememberIsWideScreen
 import com.app.market.viewmodel.InstallerSettingsViewModel
-import com.app.market.viewmodel.TodayViewModel
+import com.app.market.viewmodel.RecommendedViewModel
 import com.app.market.viewmodel.UpdatesViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -94,14 +94,14 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import kotlin.math.abs
 
 // 主页签集合按平台能力裁剪：桌面端（无法扫描已装应用 / 安装）不含「更新」。
-private enum class MainTab { Today, Updates, Settings }
+private enum class MainTab { Recommended, Updates, Settings }
 
 @Composable
 fun MainPage(
     navigator: Navigator,
     updatesViewModel: UpdatesViewModel,
     installerSettingsViewModel: InstallerSettingsViewModel,
-    todayViewModel: TodayViewModel,
+    recommendedViewModel: RecommendedViewModel,
 ) {
     val uiPlatform = koinInject<UiPlatform>()
     val themePreferences = koinInject<ThemePreferencesRepository>()
@@ -112,7 +112,7 @@ fun MainPage(
     val appManagementSupported = uiPlatform.packageInstallationSupported
     val tabs = remember(appManagementSupported) {
         buildList {
-            add(MainTab.Today)
+            add(MainTab.Recommended)
             if (appManagementSupported) add(MainTab.Updates)
             add(MainTab.Settings)
         }
@@ -169,13 +169,13 @@ fun MainPage(
             verticalAlignment = Alignment.Top,
         ) { page ->
             when (tabs[page]) {
-                MainTab.Today -> TodayTab(
-                    viewModel = todayViewModel,
+                MainTab.Recommended -> RecommendedTab(
+                    viewModel = recommendedViewModel,
                     updatesViewModel = updatesViewModel.takeIf { appManagementSupported },
                     bottomPadding = bottomPadding,
                     onClickViewUpdates = { tabs.indexOf(MainTab.Updates).takeIf { it >= 0 }?.let(mainPagerState::animateToPage) },
                     onClickArticle = { article ->
-                        navigator.push(Route.TodayArticle(article.rId))
+                        navigator.push(Route.RecommendedArticle(article.rId))
                     },
                     onOpenSearch = { navigator.push(Route.Search(null)) },
                 )
@@ -348,22 +348,22 @@ fun MainPage(
 }
 
 private fun HomePage.toTab(): MainTab = when (this) {
-    HomePage.TODAY -> MainTab.Today
+    HomePage.RECOMMENDED -> MainTab.Recommended
     HomePage.UPDATES -> MainTab.Updates
     // 兼容旧版本保存的搜索首页配置
-    HomePage.SEARCH -> MainTab.Today
+    HomePage.SEARCH -> MainTab.Recommended
 }
 
 private val MainTab.icon
     get() = when (this) {
-        MainTab.Today -> MiuixIcons.Create
+        MainTab.Recommended -> MiuixIcons.Create
         MainTab.Updates -> MiuixIcons.Update
         MainTab.Settings -> MiuixIcons.Settings
     }
 
 private val MainTab.labelRes
     get() = when (this) {
-        MainTab.Today -> Res.string.nav_today
+        MainTab.Recommended -> Res.string.nav_recommended
         MainTab.Updates -> Res.string.nav_updates
         MainTab.Settings -> Res.string.nav_settings
     }

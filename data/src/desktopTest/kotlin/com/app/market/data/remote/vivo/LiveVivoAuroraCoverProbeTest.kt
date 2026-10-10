@@ -1,7 +1,7 @@
 package com.app.market.data.remote.vivo
 
 import com.app.market.di.dataModules
-import com.app.market.domain.model.today.TodayArticleBlock
+import com.app.market.domain.model.recommended.RecommendedArticleBlock
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsBytes
@@ -31,7 +31,7 @@ class LiveVivoAuroraCoverProbeTest {
                 val article = runCatching { api.article(first.rId) }.getOrNull()
                 article?.let {
                     probe(client, "article-header:${it.title}", it.headerImage)
-                    it.blocks.filterIsInstance<TodayArticleBlock.Image>().forEach { block ->
+                    it.blocks.filterIsInstance<RecommendedArticleBlock.Image>().forEach { block ->
                         probe(client, "article-image", block.imageUrl)
                     }
                 }

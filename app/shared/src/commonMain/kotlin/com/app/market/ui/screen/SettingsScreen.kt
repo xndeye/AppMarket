@@ -40,10 +40,12 @@ import com.app.market.resources.installer_section
 import com.app.market.resources.installer_section_summary
 import com.app.market.resources.manual_update
 import com.app.market.resources.manual_update_summary
+import com.app.market.resources.nav_recommended
 import com.app.market.resources.nav_search
 import com.app.market.resources.nav_settings
-import com.app.market.resources.nav_today
 import com.app.market.resources.nav_updates
+import com.app.market.resources.recommended_source
+import com.app.market.resources.recommended_source_summary
 import com.app.market.resources.remove_search_ads
 import com.app.market.resources.remove_search_ads_summary
 import com.app.market.resources.saved_packages
@@ -55,6 +57,8 @@ import com.app.market.resources.show_app_comments
 import com.app.market.resources.show_app_comments_summary
 import com.app.market.resources.show_promotions
 import com.app.market.resources.show_promotions_summary
+import com.app.market.resources.show_recommended_updates
+import com.app.market.resources.show_recommended_updates_summary
 import com.app.market.resources.show_same_developer
 import com.app.market.resources.show_same_developer_summary
 import com.app.market.resources.show_system_apps
@@ -63,8 +67,6 @@ import com.app.market.resources.strip_name_subtitle
 import com.app.market.resources.strip_name_subtitle_summary
 import com.app.market.resources.theme
 import com.app.market.resources.theme_summary
-import com.app.market.resources.today_source
-import com.app.market.resources.today_source_summary
 import com.app.market.resources.update_history
 import com.app.market.resources.update_history_summary
 import com.app.market.resources.update_source
@@ -104,8 +106,9 @@ fun SettingsTab(
     val updatesState by updatesViewModel.uiState.collectAsStateWithLifecycle()
     val installerState by installerSettingsViewModel.uiState.collectAsStateWithLifecycle()
     val homePage by updatesViewModel.homePage.collectAsStateWithLifecycle()
+    val showRecommendedUpdates by updatesViewModel.showRecommendedUpdates.collectAsStateWithLifecycle()
     val searchSources by updatesViewModel.searchSources.collectAsStateWithLifecycle()
-    val todaySource by updatesViewModel.todaySource.collectAsStateWithLifecycle()
+    val recommendedSource by updatesViewModel.recommendedSource.collectAsStateWithLifecycle()
     val showAppComments by updatesViewModel.showAppComments.collectAsStateWithLifecycle()
     val showSameDeveloper by updatesViewModel.showSameDeveloper.collectAsStateWithLifecycle()
     val showPromotions by updatesViewModel.showPromotions.collectAsStateWithLifecycle()
@@ -132,14 +135,14 @@ fun SettingsTab(
             item {
                 val sourceOptions = AppSource.entries
                 val updateSourceOptions = AppSource.entries.filter { it.capabilities.supportsUpdates }
-                val todaySourceOptions = AppSource.entries.filter { it.capabilities.supportsTodayFeed }
+                val recommendedSourceOptions = AppSource.entries.filter { it.capabilities.supportsRecommendedFeed }
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                     WindowDropdownPreference(
-                        title = stringResource(Res.string.today_source),
-                        summary = stringResource(Res.string.today_source_summary),
-                        items = todaySourceOptions.map { appSourceLabel(it) },
-                        selectedIndex = todaySourceOptions.indexOf(todaySource).coerceAtLeast(0),
-                        onSelectedIndexChange = { updatesViewModel.setTodaySource(todaySourceOptions[it]) },
+                        title = stringResource(Res.string.recommended_source),
+                        summary = stringResource(Res.string.recommended_source_summary),
+                        items = recommendedSourceOptions.map { appSourceLabel(it) },
+                        selectedIndex = recommendedSourceOptions.indexOf(recommendedSource).coerceAtLeast(0),
+                        onSelectedIndexChange = { updatesViewModel.setRecommendedSource(recommendedSourceOptions[it]) },
                     )
                     if (appManagementSupported) {
                         WindowDropdownPreference(
@@ -312,9 +315,9 @@ fun SettingsTab(
             item {
                 // 桌面端无「更新」页，首页选项相应剔除
                 val homePageOptions = if (appManagementSupported) {
-                    listOf(HomePage.TODAY, HomePage.UPDATES)
+                    listOf(HomePage.RECOMMENDED, HomePage.UPDATES)
                 } else {
-                    listOf(HomePage.TODAY)
+                    listOf(HomePage.RECOMMENDED)
                 }
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                     WindowDropdownPreference(
@@ -324,6 +327,14 @@ fun SettingsTab(
                         selectedIndex = homePageOptions.indexOf(homePage).coerceAtLeast(0),
                         onSelectedIndexChange = { updatesViewModel.setHomePage(homePageOptions[it]) },
                     )
+                    if (appManagementSupported) {
+                        SwitchPreference(
+                            title = stringResource(Res.string.show_recommended_updates),
+                            summary = stringResource(Res.string.show_recommended_updates_summary),
+                            checked = showRecommendedUpdates,
+                            onCheckedChange = updatesViewModel::setShowRecommendedUpdates,
+                        )
+                    }
                     SwitchPreference(
                         title = stringResource(Res.string.strip_name_subtitle),
                         summary = stringResource(Res.string.strip_name_subtitle_summary),
@@ -353,8 +364,8 @@ fun SettingsTab(
 
 private val HomePage.labelRes
     get() = when (this) {
-        HomePage.TODAY -> Res.string.nav_today
+        HomePage.RECOMMENDED -> Res.string.nav_recommended
         HomePage.UPDATES -> Res.string.nav_updates
         // 旧值仅用于兼容读取，不再作为可选首页展示
-        HomePage.SEARCH -> Res.string.nav_today
+        HomePage.SEARCH -> Res.string.nav_recommended
     }

@@ -43,8 +43,8 @@ import coil3.SingletonImageLoader
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
 import com.app.market.domain.model.market.MarketAppInfo
-import com.app.market.domain.model.today.TodayArticle
-import com.app.market.domain.model.today.TodayArticleBlock
+import com.app.market.domain.model.recommended.RecommendedArticle
+import com.app.market.domain.model.recommended.RecommendedArticleBlock
 import com.app.market.resources.Res
 import com.app.market.resources.golden_award
 import com.app.market.ui.component.AppAsyncImage
@@ -57,9 +57,9 @@ import com.app.market.ui.util.allowColorSampling
 import com.app.market.ui.util.appDisplayName
 import com.app.market.ui.util.dominantImageColor
 import com.app.market.ui.util.installActionText
-import com.app.market.ui.util.todayAwardLabel
-import com.app.market.ui.util.todayAppSummary
-import com.app.market.viewmodel.TodayViewModel
+import com.app.market.ui.util.recommendedAppSummary
+import com.app.market.ui.util.recommendedAwardLabel
+import com.app.market.viewmodel.RecommendedViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.selects.select
@@ -79,9 +79,9 @@ import kotlin.time.Duration.Companion.milliseconds
 private const val ARTICLE_HEADER_IMAGE_WAIT_MS = 8_000L
 
 @Composable
-fun TodayArticleScreen(
+fun RecommendedArticleScreen(
     rId: String,
-    viewModel: TodayViewModel,
+    viewModel: RecommendedViewModel,
     onOpenApp: (MarketAppInfo) -> Unit,
     onBack: () -> Unit,
     applyWindowInsets: Boolean = true,
@@ -101,7 +101,7 @@ fun TodayArticleScreen(
         ?: feedItem?.apps?.singleOrNull()?.displayName
         ?: article?.app?.displayName
         ?: article?.apps?.singleOrNull()?.displayName
-    val awardLabel = todayAwardLabel(awardName, title, appName)
+    val awardLabel = recommendedAwardLabel(awardName, title, appName)
     val collapsedTitle = awardLabel
     val defaultAccentColor = MiuixTheme.colorScheme.primary
     var accentColor by remember(article?.headerImage, defaultAccentColor) {
@@ -584,7 +584,7 @@ private fun SingleArticleAppBar(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = app.todayAppSummary(),
+                    text = app.recommendedAppSummary(),
                     color = MiuixTheme.colorScheme.onPrimary.copy(alpha = 0.4f),
                     style = MiuixTheme.textStyles.body2.copy(lineHeight = 18.sp),
                     maxLines = 1,
@@ -718,7 +718,7 @@ private const val BlockSeparator = "\u0001"
 private const val HeadingMarker = "\u0002"
 private const val ImageMarker = "\u0003"
 
-private fun orderedArticleBlocks(article: TodayArticle): List<ArticleBlock> {
+private fun orderedArticleBlocks(article: RecommendedArticle): List<ArticleBlock> {
     val result = mutableListOf<ArticleBlock>()
     val pendingApps = mutableListOf<MarketAppInfo>()
     val featuredPackage = article.apps.singleOrNull()?.packageName
@@ -732,14 +732,14 @@ private fun orderedArticleBlocks(article: TodayArticle): List<ArticleBlock> {
     }
 
     article.blocks.forEach { block ->
-        if (block is TodayArticleBlock.App) {
+        if (block is RecommendedArticleBlock.App) {
             if (block.value.packageName != featuredPackage) pendingApps += block.value
             return@forEach
         }
 
         flushApps()
         when (block) {
-            is TodayArticleBlock.Banner -> {
+            is RecommendedArticleBlock.Banner -> {
                 if (!skippedHeroBanner) {
                     skippedHeroBanner = true
                 } else if (block.imageUrl.isNotBlank()) {
@@ -747,8 +747,8 @@ private fun orderedArticleBlocks(article: TodayArticle): List<ArticleBlock> {
                 }
             }
 
-            is TodayArticleBlock.RichText -> result += parseArticleBlocks(block.html)
-            is TodayArticleBlock.Image -> if (block.imageUrl.isNotBlank()) {
+            is RecommendedArticleBlock.RichText -> result += parseArticleBlocks(block.html)
+            is RecommendedArticleBlock.Image -> if (block.imageUrl.isNotBlank()) {
                 result += ArticleBlock.Image(block.imageUrl, block.width, block.height)
             }
         }

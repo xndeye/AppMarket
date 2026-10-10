@@ -17,10 +17,10 @@ import com.app.market.ui.screen.HistoricalVersionsScreen
 import com.app.market.ui.screen.IgnoredAppsScreen
 import com.app.market.ui.screen.InstallerSettingsScreen
 import com.app.market.ui.screen.ManualUpdateScreen
+import com.app.market.ui.screen.RecommendedArticleScreen
 import com.app.market.ui.screen.SavedPackagesScreen
 import com.app.market.ui.screen.SearchScreen
 import com.app.market.ui.screen.ThemeSettingsScreen
-import com.app.market.ui.screen.TodayArticleScreen
 import com.app.market.ui.screen.UpdateHistoryScreen
 import com.app.market.viewmodel.AppDetailViewModel
 import com.app.market.viewmodel.DeviceProfileViewModel
@@ -29,10 +29,10 @@ import com.app.market.viewmodel.HistoricalVersionsViewModel
 import com.app.market.viewmodel.IgnoredAppsViewModel
 import com.app.market.viewmodel.InstallerSettingsViewModel
 import com.app.market.viewmodel.ManualUpdateViewModel
+import com.app.market.viewmodel.RecommendedViewModel
 import com.app.market.viewmodel.SavedPackagesViewModel
 import com.app.market.viewmodel.SearchViewModel
 import com.app.market.viewmodel.ThemeSettingsViewModel
-import com.app.market.viewmodel.TodayViewModel
 import com.app.market.viewmodel.UpdateHistoryViewModel
 import com.app.market.viewmodel.UpdatesViewModel
 import org.koin.compose.viewmodel.koinViewModel
@@ -57,7 +57,7 @@ fun AppNavigation(
     val updatesViewModel = koinViewModel<UpdatesViewModel>()
     val searchViewModel = koinViewModel<SearchViewModel>()
     val installerSettingsViewModel = koinViewModel<InstallerSettingsViewModel>()
-    val todayViewModel = koinViewModel<TodayViewModel>()
+    val recommendedViewModel = koinViewModel<RecommendedViewModel>()
     val swipeBackDirection = if (LocalLayoutDirection.current == LayoutDirection.Rtl) {
         NavSwipeDirection.RightToLeft
     } else {
@@ -111,7 +111,7 @@ fun AppNavigation(
                     navigator = navigator,
                     updatesViewModel = updatesViewModel,
                     installerSettingsViewModel = installerSettingsViewModel,
-                    todayViewModel = todayViewModel,
+                    recommendedViewModel = recommendedViewModel,
                 )
             }
             entry<Route.Search>(swipeDismiss = swipeBackDirection) { route ->
@@ -171,10 +171,10 @@ fun AppNavigation(
                     onBack = { navigator.pop() },
                 )
             }
-            entry<Route.TodayArticle>(swipeDismiss = swipeBackDirection) { route ->
-                TodayArticleScreen(
+            entry<Route.RecommendedArticle>(swipeDismiss = swipeBackDirection) { route ->
+                RecommendedArticleScreen(
                     rId = route.rId,
-                    viewModel = todayViewModel,
+                    viewModel = recommendedViewModel,
                     onOpenApp = {
                         navigator.push(
                             Route.AppDetail(

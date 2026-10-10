@@ -7,8 +7,8 @@ import com.app.market.domain.model.market.AppDetail
 import com.app.market.domain.model.market.MarketAppInfo
 import com.app.market.domain.model.market.SearchPage
 import com.app.market.domain.model.market.hasInstalledSplits
-import com.app.market.domain.model.today.TodayArticle
-import com.app.market.domain.model.today.TodayFeedPage
+import com.app.market.domain.model.recommended.RecommendedArticle
+import com.app.market.domain.model.recommended.RecommendedFeedPage
 import com.app.market.domain.model.update.ManualUpdateRequest
 import com.app.market.domain.model.update.ManualUpdateResult
 import com.app.market.domain.repository.InstalledApkHashRepository
@@ -61,10 +61,10 @@ internal class OppoRepositoryImpl(
     override suspend fun checkManualUpdate(request: ManualUpdateRequest): ManualUpdateResult =
         withContext(Dispatchers.Default) { api.checkManualUpdate(request) }
 
-    override suspend fun beautyFeed(page: Int, pageSize: Int): TodayFeedPage =
+    override suspend fun beautyFeed(page: Int, pageSize: Int): RecommendedFeedPage =
         withContext(Dispatchers.Default) { api.beautyFeed(page, pageSize) }
 
-    override suspend fun beautyArticle(snippetId: String): TodayArticle =
+    override suspend fun beautyArticle(snippetId: String): RecommendedArticle =
         withContext(Dispatchers.Default) { api.beautyArticle(snippetId) }
 
     private suspend fun resolveOldApkHash(app: InstalledPackage, deltaEnabled: Boolean): InstalledPackage = when {
