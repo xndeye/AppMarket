@@ -235,7 +235,7 @@ private fun UpdatesCardList(
                 }
             }
         }
-        listOf(regularAppsTitle to regularApps, systemAppsTitle to systemApps)
+        listOf(systemAppsTitle to systemApps, regularAppsTitle to regularApps)
             .forEachIndexed { sectionIndex, (title, apps) ->
                 if (apps.isEmpty()) return@forEachIndexed
                 item(key = "updates-section-$sectionIndex") {
