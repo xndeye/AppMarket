@@ -4,6 +4,11 @@ import com.app.market.data.remote.randomHex
 import com.app.market.data.remote.urlEncodeParameters
 import com.app.market.domain.exception.MarketException
 import com.app.market.domain.model.download.DownloadPatch
+import com.app.market.domain.model.market.GameCatalog
+import com.app.market.domain.model.market.GameFilter
+import com.app.market.domain.model.market.GameOption
+import com.app.market.domain.model.market.GameQuery
+import com.app.market.domain.model.market.GameRatingRange
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
@@ -14,6 +19,7 @@ import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
+import io.ktor.http.Url
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import kotlinx.serialization.json.Json
@@ -90,6 +96,15 @@ internal data class TapTapRecommendationPage(
     val nextPage: String,
 )
 
+internal data class TapTapGameRecord(val app: TapTapAppRecord, val isAd: Boolean)
+
+internal data class TapTapGamePage(
+    val items: List<TapTapGameRecord>,
+    val hasMore: Boolean,
+    val nextPage: String,
+    val sessionId: String,
+)
+
 internal data class TapTapApiConfig(
     val baseUrl: String = "https://api.taptapdada.com",
 )
@@ -122,6 +137,97 @@ internal class TapTapApi(
         append("&LOC=CN&LANG=zh_CN&CH=organic-direct_index")
         append("&UID=").append(uid)
         append("&NT=1&SR=1080x2400&DEB=Android&DEM=AppMarket&OSV=16")
+    }
+
+    suspend fun getGameCategories(): GameCatalog {
+        val root = libraryRequest("terms", linkedMapOf("is_64_bit_model" to "true"), "游戏分类")
+        val data = root.obj("data") ?: throw MarketException("TapTap 未返回游戏分类配置")
+        fun options(group: JsonObject): List<GameOption> =
+            (group.array("items") ?: throw MarketException("TapTap 分类配置缺少 items"))
+                .map { value ->
+                    val item = value as? JsonObject ?: throw MarketException("TapTap 分类选项格式无效")
+                    val label = item.string("label").takeIf(String::isNotBlank)
+                        ?: throw MarketException("TapTap 分类选项缺少 label")
+                    val queryValue = item.primitive("value")?.contentOrNull
+                        ?: throw MarketException("TapTap 分类选项缺少 value")
+                    GameOption(label, queryValue, item.obj("icon")?.string("url").orEmpty())
+                }
+        val categories = data.obj("tap_icon")?.let(::options)
+            ?.takeIf(List<GameOption>::isNotEmpty) ?: throw MarketException("TapTap 未返回有效游戏分类")
+        val sorts = data.obj("sort")?.let(::options)
+            ?.takeIf(List<GameOption>::isNotEmpty) ?: throw MarketException("TapTap 未返回有效游戏排序")
+        val groups = data.array("filter_full")
+            ?: throw MarketException("TapTap 未返回游戏筛选配置")
+        val filters = (groups.mapNotNull { it as? JsonObject } +
+                listOfNotNull(data.obj("apk_size"), data.obj("tap_feature")))
+            .filter { it.string("key") in setOf("status", "released_at", "run_environment", "apk_size", "tap_feature") }
+            .distinctBy { it.string("key") }
+            .map { group ->
+                GameFilter(group.string("key"), group.string("label"), options(group))
+            }
+        val rating = data.obj("rating_score") ?: throw MarketException("TapTap 未返回评分范围")
+        val min = rating.primitive("min")?.longOrNull?.toInt()
+        val max = rating.primitive("max")?.longOrNull?.toInt()
+        val step = rating.primitive("step")?.longOrNull?.toInt()
+        if (min == null || max == null || step == null || max <= min || step <= 0) {
+            throw MarketException("TapTap 评分范围无效")
+        }
+        val statuses = data.array("selected").orEmpty().mapNotNull { it as? JsonObject }
+            .firstOrNull { it.string("key") == "status" }?.let(::options).orEmpty().map(GameOption::value)
+        return GameCatalog(categories, sorts, filters, GameRatingRange(min, max, step), statuses)
+    }
+
+    suspend fun getCategoryGames(query: GameQuery, nextPage: String, sessionId: String): TapTapGamePage {
+        val filters = query.filters
+        val values = linkedMapOf(
+            "tag_icon" to query.category,
+            "sort" to query.sort,
+            "from" to "0",
+            "limit" to "10",
+            "status" to filters.statuses.joinToString(","),
+            "rating_score" to "${filters.ratingMin},${filters.ratingMax}",
+        )
+        listOf(
+            "apk_size" to filters.apkSize,
+            "released_at" to filters.releasedAt,
+            "run_environment" to filters.runEnvironment,
+            "tap_feature" to filters.tapFeature,
+        ).filter { it.second.isNotBlank() }.forEach { (key, value) -> values[key] = value }
+        if (sessionId.isNotBlank()) values["session_id"] = sessionId
+        if (nextPage.isNotBlank()) {
+            val cursor = Url(if (nextPage.startsWith("/")) config.baseUrl + nextPage else nextPage)
+            if (cursor.encodedPath != "/library/v2/list") throw MarketException("TapTap 游戏分页地址无效")
+            cursor.parameters.entries().forEach { (key, entries) -> values[key] = entries.joinToString(",") }
+        }
+        val data = libraryRequest("list", values, "分类游戏列表").obj("data")
+            ?: throw MarketException("TapTap 未返回分类游戏列表")
+        val list = data.array("list") ?: throw MarketException("TapTap 分类游戏列表缺少 list")
+        val hasMore = data.bool("has_more") ?: throw MarketException("TapTap 分类游戏列表缺少 has_more")
+        val next = data.string("next_page")
+        if (hasMore && next.isBlank()) throw MarketException("TapTap 游戏列表有下一页但未返回分页地址")
+        if (hasMore && next == nextPage) throw MarketException("TapTap 游戏分页游标未推进")
+        val items = list.mapNotNull { value ->
+            val item = value as? JsonObject ?: throw MarketException("TapTap 游戏记录格式无效")
+            if (item.bool("match_filter") == false) return@mapNotNull null
+            val app = item.obj("app") ?: return@mapNotNull null
+            TapTapGameRecord(
+                parseApp(app) ?: throw MarketException("TapTap 游戏记录缺少有效 id 或名称"),
+                item.bool("is_ad") == true,
+            )
+        }
+        return TapTapGamePage(items, hasMore, next, data.string("session_id").ifBlank { values["session_id"].orEmpty() })
+    }
+
+    private suspend fun libraryRequest(
+        endpoint: String,
+        values: LinkedHashMap<String, String>,
+        operation: String,
+    ): JsonObject {
+        val parameters = values + mapOf("X-UA" to xUa, "X-TP" to "app_plugin-41805")
+        val response = client.get("${config.baseUrl}/library/v2/$endpoint?${urlEncodeParameters(parameters)}") {
+            header(HttpHeaders.UserAgent, TapTapUserAgent)
+        }
+        return response.jsonObject(operation)
     }
 
     suspend fun search(keyword: String, page: Int): Pair<List<TapTapSearchHit>, Boolean> {
@@ -295,7 +401,7 @@ internal class TapTapApi(
             val error = root.obj("data")?.string("error_description")
                 .orEmpty()
                 .ifBlank { root.obj("data")?.string("msg").orEmpty() }
-            throw MarketException("TapTap ${operation}失败${error.takeIf(String::isNotBlank)?.let { "：$it" }.orEmpty()}")
+            throw MarketException("TapTap ${operation}失败（HTTP ${status.value}）${error.takeIf(String::isNotBlank)?.let { "：$it" }.orEmpty()}")
         }
         requireSuccess(this, operation)
         return root
@@ -303,7 +409,7 @@ internal class TapTapApi(
 
     private fun parseApp(app: JsonObject): TapTapAppRecord? {
         val packageName = app.string("identifier")
-        if (packageName.isBlank()) return null
+        if (app.long("id") <= 0L || app.string("title").isBlank()) return null
         val download = app.obj("download")
         val apk = download?.obj("apk")
         val stats = app.obj("stat")

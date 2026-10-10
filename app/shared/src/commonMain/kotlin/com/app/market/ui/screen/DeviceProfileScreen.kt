@@ -268,7 +268,7 @@ private fun DeviceProfileSourcePage(
             .scrollEndHaptic()
             .overScrollVertical()
             .nestedScroll(scrollBehavior.nestedScrollConnection),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
         contentPadding = PaddingValues(
             start = innerPadding.calculateStartPadding(layoutDirection) + 12.dp,
             end = innerPadding.calculateEndPadding(layoutDirection) + 12.dp,

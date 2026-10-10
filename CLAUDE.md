@@ -35,7 +35,7 @@ Kotlin Multiplatform（Android + Desktop）应用商店客户端，UI 使用 Com
 ## UI 设计规范：按钮
 
 - 全部按钮使用 [AppButton.kt](app/shared/src/commonMain/kotlin/com/app/market/ui/component/AppButton.kt) 中的 `AppButton` / `AppTextButton` / `AppCompactButton` / `AppActionButton`，不要直接使用 miuix 的 `Button` / `TextButton`。
-- 按钮文字统一经 `AppButtonText`：`body2`（14sp），超宽时自动缩字至最小 8sp 再省略号。
+- 按钮文字统一经 `AppButtonText`：使用 `body2`（14sp），遵循系统字体缩放，不自动缩小字号。优先使用简短操作文案和内容自适应宽度；空间受限时单行省略，详细状态放在行内说明中。
 - 调整按钮样式只改 AppButton.kt 一处；不通过主题 `textStyles` 覆盖实现。
 
 ## 构建验证

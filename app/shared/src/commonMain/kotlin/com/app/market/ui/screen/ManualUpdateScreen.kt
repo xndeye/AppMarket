@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
@@ -79,7 +78,7 @@ fun ManualUpdateScreen(
                 .scrollEndHaptic()
                 .overScrollVertical()
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
             contentPadding = PaddingValues(
                 start = innerPadding.calculateStartPadding(layoutDirection) + 12.dp,
                 end = innerPadding.calculateEndPadding(layoutDirection) + 12.dp,
@@ -253,7 +252,6 @@ private fun ManualUpdateResultCard(
                 onResumeDownload = onDownload,
                 onInstallDownloaded = onInstallDownloaded,
                 onCancel = onCancel,
-                modifier = Modifier.width(70.dp),
             )
         }
     }

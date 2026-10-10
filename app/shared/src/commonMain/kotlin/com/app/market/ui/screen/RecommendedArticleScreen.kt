@@ -47,9 +47,11 @@ import com.app.market.domain.model.recommended.RecommendedArticle
 import com.app.market.domain.model.recommended.RecommendedArticleBlock
 import com.app.market.resources.Res
 import com.app.market.resources.golden_award
+import com.app.market.resources.retry
 import com.app.market.ui.component.AppAsyncImage
 import com.app.market.ui.component.AppButton
 import com.app.market.ui.component.AppIcon
+import com.app.market.ui.component.AppTextButton
 import com.app.market.ui.component.CollapsibleMarketScaffold
 import com.app.market.ui.component.LoadingBox
 import com.app.market.ui.component.RelatedAppsList
@@ -212,6 +214,7 @@ fun RecommendedArticleScreen(
                 article == null -> ArticleErrorState(
                     message = state.articleError,
                     safePadding = safePadding,
+                    onRetry = { viewModel.loadArticle(rId) },
                 )
 
                 else -> {
@@ -249,7 +252,7 @@ private fun ArticleLoadingState(safePadding: PaddingValues) {
 }
 
 @Composable
-private fun ArticleErrorState(message: String, safePadding: PaddingValues) {
+private fun ArticleErrorState(message: String, safePadding: PaddingValues, onRetry: () -> Unit) {
     val layoutDirection = LocalLayoutDirection.current
     Box(
         Modifier
@@ -261,12 +264,18 @@ private fun ArticleErrorState(message: String, safePadding: PaddingValues) {
                 bottom = safePadding.calculateBottomPadding(),
             ),
     ) {
-        Text(
-            text = message,
-            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-            style = MiuixTheme.textStyles.main,
+        Column(
             modifier = Modifier.align(Alignment.Center).padding(24.dp),
-        )
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = message,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                style = MiuixTheme.textStyles.main,
+            )
+            AppTextButton(stringResource(Res.string.retry), onRetry)
+        }
     }
 }
 

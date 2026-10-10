@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
@@ -159,7 +158,6 @@ private fun DownloadingAppRow(
             onCancel = onCancel,
             minHeight = 34.dp,
             insideMargin = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
-            modifier = Modifier.width(70.dp),
         )
     }
 }

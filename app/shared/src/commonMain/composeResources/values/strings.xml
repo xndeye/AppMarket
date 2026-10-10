@@ -72,6 +72,7 @@
     <string name="search_failed">Search failed</string>
     <string name="search_history">Search history</string>
     <string name="clear_history">Clear</string>
+    <string name="remove_search_history">Remove search history: %1$s</string>
 
     <!-- Settings -->
     <string name="settings">Settings</string>
@@ -111,13 +112,13 @@
     <string name="update_source_summary">Used to check for app updates</string>
     <string name="recommended_source">Recommended source</string>
     <string name="recommended_source_summary">Used for Recommended page content</string>
-    <string name="source_xiaomi">小米</string>
-    <string name="source_vivo">VIVO</string>
+    <string name="source_xiaomi">Xiaomi</string>
+    <string name="source_vivo">vivo</string>
     <string name="source_wandoujia">Wandoujia</string>
     <string name="source_oppo">OPPO</string>
     <string name="source_samsung">Samsung</string>
-    <string name="source_honor">Honor</string>
-    <string name="source_huawei">Huawei</string>
+    <string name="source_honor">HONOR</string>
+    <string name="source_huawei">HUAWEI</string>
     <string name="source_taptap">TapTap</string>
     <string name="historical_versions">Historical versions</string>
     <string name="historical_versions_summary">View all versions</string>
@@ -125,11 +126,11 @@
     <string name="no_historical_versions">No historical versions</string>
     <string name="retry">Retry</string>
     <string name="show_app_comments">Show user reviews</string>
-    <string name="show_app_comments_summary">Shown on detail pages when the current search source provides reviews</string>
+    <string name="show_app_comments_summary">Shown on detail pages when the app source provides reviews</string>
     <string name="show_same_developer">Show same developer</string>
-    <string name="show_same_developer_summary">Shown on detail pages when the current search source provides same-developer apps</string>
+    <string name="show_same_developer_summary">Shown on detail pages when the app source provides same-developer apps</string>
     <string name="show_promotions">Show featured offers</string>
-    <string name="show_promotions_summary">Shown on detail pages when the current search source provides featured offers</string>
+    <string name="show_promotions_summary">Shown on detail pages when the app source provides featured offers</string>
     <string name="manual_update">Manual update check</string>
     <string name="manual_update_summary">Check a single app by package name and version code</string>
     <string name="manual_update_package">Package name</string>
@@ -247,7 +248,6 @@
     <string name="no_saved_packages">No saved installers</string>
     <string name="settings_section_download_install">Downloads &amp; installs</string>
     <string name="downloading_apps">Active downloads</string>
-    <string name="downloading_apps_summary">View and manage in-progress downloads</string>
     <string name="downloading_apps_empty">No download tasks</string>
     <string name="download_ready">Ready to install</string>
     <string name="download_finished">Completed</string>
@@ -263,4 +263,15 @@
     <string name="image_saved">Saved to Pictures/AppMarket</string>
     <string name="image_save_failed">Could not save the image</string>
     <string name="image_save_unsupported">Saving images is only available on Android</string>
+    <string name="nav_games">Games</string>
+    <string name="games_filters">Filters</string>
+    <string name="games_status">Status</string>
+    <string name="games_apk_size">Size</string>
+    <string name="games_load_more">Load more</string>
+    <string name="games_reset">Reset</string>
+    <string name="comments_load_failed">Unable to load reviews: %1$s</string>
+    <string name="same_developer_load_failed">Unable to load apps from this developer: %1$s</string>
+    <string name="games_view_results">View results</string>
+    <string name="games_unlimited">Any</string>
+    <string name="games_rating">Rating</string>
 </resources>

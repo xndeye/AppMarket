@@ -2,6 +2,9 @@ package com.app.market.domain.repository
 
 import com.app.market.domain.model.download.DownloadMeta
 import com.app.market.domain.model.market.AppDetail
+import com.app.market.domain.model.market.GameCatalog
+import com.app.market.domain.model.market.GamePage
+import com.app.market.domain.model.market.GameQuery
 import com.app.market.domain.model.market.MarketAppInfo
 import com.app.market.domain.model.market.SearchPage
 import com.app.market.domain.model.recommended.RecommendedArticle
@@ -11,6 +14,9 @@ import com.app.market.domain.model.update.ManualUpdateResult
 
 /** TapTap anonymous source used for search, application details, downloads and updates. */
 interface TapTapRepository {
+    val cachedGameCategories: GameCatalog?
+    suspend fun getGameCategories(): GameCatalog
+    suspend fun getCategoryGames(query: GameQuery, nextPage: String, sessionId: String): GamePage
     suspend fun search(keyword: String, page: Int = 0): SearchPage
     suspend fun appDetail(appId: Long, packageName: String): AppDetail
     suspend fun recommendedFeed(page: Int = 0, pageSize: Int = 9): RecommendedFeedPage

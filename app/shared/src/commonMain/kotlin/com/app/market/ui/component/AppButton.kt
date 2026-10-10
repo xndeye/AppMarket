@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.text.TextAutoSize
-import androidx.compose.foundation.text.modifiers.TextAutoSizeLayoutScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -23,13 +21,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.app.market.domain.model.download.DownloadPhase
 import com.app.market.domain.model.download.DownloadState
 import com.app.market.resources.Res
@@ -47,11 +41,6 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButtonColors
 import top.yukonga.miuix.kmp.squircle.squircleSurface
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-
-// App-wide replacement for miuix Button/TextButton: same API surface, but labels render at
-// body2 (14.sp) instead of the stock 17.sp button style, shrinking down to 8.sp before
-// ellipsizing when the button is narrower than its text.
-private val AppButtonMinFontSize = 8.sp
 
 @Composable
 fun AppButton(
@@ -146,38 +135,15 @@ fun AppButtonText(
     color: Color? = null,
 ) {
     val style = MiuixTheme.textStyles.body2
-    val maxFontSize = style.fontSize.takeUnless { it == TextUnit.Unspecified } ?: 14.sp
-    val minFontSize = if (maxFontSize.value < AppButtonMinFontSize.value) maxFontSize else AppButtonMinFontSize
     Text(
         text = text,
         modifier = modifier,
         color = color ?: Color.Unspecified,
-        autoSize = DescendingSpAutoSize(minFontSize = minFontSize, maxFontSize = maxFontSize),
         style = style,
         maxLines = 1,
         softWrap = false,
         overflow = TextOverflow.Ellipsis,
     )
-}
-
-private data class DescendingSpAutoSize(
-    val minFontSize: TextUnit,
-    val maxFontSize: TextUnit,
-) : TextAutoSize {
-    override fun TextAutoSizeLayoutScope.getFontSize(
-        constraints: Constraints,
-        text: AnnotatedString,
-    ): TextUnit {
-        var currentSp = maxFontSize.value
-        while (currentSp > minFontSize.value) {
-            val result = performLayout(constraints, text, currentSp.sp)
-            val overflowed = result.hasVisualOverflow ||
-                    (result.lineCount > 0 && result.isLineEllipsized(0))
-            if (!overflowed) return currentSp.sp
-            currentSp -= 0.5f
-        }
-        return minFontSize
-    }
 }
 
 // Compact action-button metrics, matching the payload_extract_gui look.

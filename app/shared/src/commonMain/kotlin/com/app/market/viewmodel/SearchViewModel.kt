@@ -15,17 +15,24 @@ import com.app.market.domain.repository.PackageRepository
 import com.app.market.domain.repository.SearchHistoryRepository
 import com.app.market.domain.repository.UpdatePreferencesRepository
 import com.app.market.platform.UiPlatform
+import com.app.market.resources.Res
+import com.app.market.resources.search_failed
 import com.app.market.ui.model.AppActionKind
 import com.app.market.ui.model.SearchResultItem
 import com.app.market.ui.model.resolveActionKind
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.getString
 
 /** 每个来源独立翻页，各自的结尾位置可能不同。 */
 @Immutable
@@ -39,11 +46,11 @@ data class SearchUiState(
     val showNoResults: Boolean = false,
     val results: List<SearchResultItem> = emptyList(),
     val history: List<String> = emptyList(),
-    val selectedHistory: String? = null,
-    /** Keyword the current [results] belong to (may differ from the live input [keyword]). */
+    /** 当前结果对应的已提交关键词，可以与正在编辑的输入不同。 */
     val activeKeyword: String = "",
     val paging: Map<AppSource, SourcePaging> = emptyMap(),
     val loadingMore: Boolean = false,
+    val loadMoreError: String = "",
     /** 新搜索或清空输入时递增，使旧翻页请求失效并重置列表位置。 */
     val searchEpoch: Int = 0,
     val sources: Set<AppSource> = AppSource.Default,
@@ -61,6 +68,7 @@ class SearchViewModel(
     private val packages: PackageRepository,
     private val downloads: DownloadRepository,
     private val uiPlatform: UiPlatform,
+    private val applicationScope: CoroutineScope,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SearchUiState(sources = updatePrefs.searchSources.value))
@@ -69,6 +77,8 @@ class SearchViewModel(
     val downloadStates: StateFlow<Map<String, DownloadState>> = downloads.states
     private val pendingDownloads = mutableSetOf<String>()
     private var searchJob: Job? = null
+    private var loadMoreJob: Job? = null
+    private var initialKeywordConsumed = false
 
     init {
         viewModelScope.launch { reloadHistory() }
@@ -105,11 +115,12 @@ class SearchViewModel(
     }
 
     fun setKeyword(value: String) {
-        // Clearing the field drops results (history reappears) and resets pagination so infinite-scroll
-        // won't refetch the old query; the in-flight search is cancelled so its late result can't repopulate.
+        // 清空输入时取消请求并重置结果和分页。
         if (value.isBlank()) {
             searchJob?.cancel()
             searchJob = null
+            loadMoreJob?.cancel()
+            loadMoreJob = null
             _uiState.update {
                 it.copy(
                     keyword = value,
@@ -120,6 +131,7 @@ class SearchViewModel(
                     activeKeyword = "",
                     paging = emptyMap(),
                     loadingMore = false,
+                    loadMoreError = "",
                     searchEpoch = it.searchEpoch + 1,
                 )
             }
@@ -127,8 +139,6 @@ class SearchViewModel(
             _uiState.update { it.copy(keyword = value) }
         }
     }
-
-    fun selectHistory(keyword: String?) = _uiState.update { it.copy(selectedHistory = keyword) }
 
     fun selectSource(source: AppSource): Job = viewModelScope.launch {
         updatePrefs.setSearchSources(setOf(source))
@@ -139,29 +149,39 @@ class SearchViewModel(
         runSearch()
     }
 
+    fun searchInitialKeyword(keyword: String) {
+        if (initialKeywordConsumed) return
+        initialKeywordConsumed = true
+        searchWith(keyword)
+    }
+
     fun runSearch() {
         val keyword = _uiState.value.keyword.trim()
-        if (keyword.isBlank() || _uiState.value.loading) return
-        executeSearch(keyword, recordHistory = true, keepResults = keyword == _uiState.value.activeKeyword)
+        if (keyword.isBlank()) return
+        executeSearch(keyword, recordHistory = true)
     }
 
     private fun rerunActiveSearch() {
         val keyword = _uiState.value.activeKeyword
         if (keyword.isBlank()) return
-        executeSearch(keyword, recordHistory = false, keepResults = false)
+        executeSearch(keyword, recordHistory = false)
     }
 
-    private fun executeSearch(keyword: String, recordHistory: Boolean, keepResults: Boolean) {
+    fun retrySearch() = rerunActiveSearch()
+
+    private fun executeSearch(keyword: String, recordHistory: Boolean) {
         searchJob?.cancel()
+        loadMoreJob?.cancel()
         _uiState.update {
             it.copy(
                 loading = true,
                 loadingMore = false,
+                loadMoreError = "",
                 errorMessage = "",
                 showNoResults = false,
-                results = if (keepResults) it.results else emptyList(),
+                results = emptyList(),
                 activeKeyword = keyword,
-                paging = if (keepResults) it.paging else emptyMap(),
+                paging = emptyMap(),
                 searchEpoch = it.searchEpoch + 1,
             )
         }
@@ -177,11 +197,22 @@ class SearchViewModel(
             val fetched = fetchPages(keyword, sources.associateWith { 0 })
             // 单源故障不该挡住另一源的结果
             if (fetched.values.none { it.isSuccess }) {
-                val failure = firstError(fetched)
-                _uiState.update { it.copy(loading = false, errorMessage = failure?.message ?: "Search failed") }
+                val message = searchError(firstError(fetched))
+                currentCoroutineContext().ensureActive()
+                _uiState.update { it.copy(loading = false, errorMessage = message) }
                 return@launch
             }
-            val items = toItems(mergeApps(emptyList(), orderedApps(fetched)), emptyList())
+            val resolved = runCatchingCancellable {
+                toItems(mergeApps(emptyList(), orderedApps(fetched)), emptyList())
+            }
+            if (resolved.isFailure) {
+                val message = searchError(resolved.exceptionOrNull())
+                currentCoroutineContext().ensureActive()
+                _uiState.update { it.copy(loading = false, errorMessage = message) }
+                return@launch
+            }
+            val items = resolved.getOrThrow()
+            currentCoroutineContext().ensureActive()
             _uiState.update {
                 it.copy(
                     loading = false,
@@ -203,19 +234,20 @@ class SearchViewModel(
         if (snapshot.loading || snapshot.loadingMore || !snapshot.hasMore || snapshot.activeKeyword.isBlank()) return
         val baseKeyword = snapshot.activeKeyword
         val baseEpoch = snapshot.searchEpoch
-        _uiState.update { it.copy(loadingMore = true) }
-        viewModelScope.launch {
+        _uiState.update { it.copy(loadingMore = true, loadMoreError = "") }
+        loadMoreJob = viewModelScope.launch {
             fun superseded() = _uiState.value.let { it.activeKeyword != baseKeyword || it.searchEpoch != baseEpoch }
             var paging = snapshot.paging
             var addedAny = false
-            var failed = false
+            var failureMessage = ""
             var attempts = 0
             while (!addedAny && attempts < MAX_PAGES_PER_LOAD && paging.values.any { it.hasMore } && !superseded()) {
                 attempts++
                 val nextPages = paging.filterValues { it.hasMore }.mapValues { (_, state) -> state.page + 1 }
                 val fetched = fetchPages(baseKeyword, nextPages)
                 if (fetched.values.none { it.isSuccess }) {
-                    failed = true; break
+                    failureMessage = searchError(firstError(fetched))
+                    break
                 }
                 // 失败的源保留原页码，下次触发重试
                 paging = paging + pagingOf(fetched, nextPages)
@@ -225,18 +257,26 @@ class SearchViewModel(
                 if (before.activeKeyword != baseKeyword || before.searchEpoch != baseEpoch) break
                 val mergedApps = mergeApps(before.results.map { it.app }, incoming)
                 addedAny = mergedApps.size > before.results.size
-                val resolved = toItems(mergedApps, before.results)
+                val result = runCatchingCancellable { toItems(mergedApps, before.results) }
+                if (result.isFailure) {
+                    failureMessage = searchError(result.exceptionOrNull())
+                    break
+                }
+                val resolved = result.getOrThrow()
+                currentCoroutineContext().ensureActive()
                 val committedPaging = paging
                 _uiState.update { state ->
                     if (state.activeKeyword != baseKeyword || state.searchEpoch != baseEpoch) state
                     else state.copy(results = resolved, paging = committedPaging)
                 }
             }
-            // Stop the spinner; keep hasMore on a transient failure (retry), else end pagination when no new items.
+            // 分页失败时保留已有结果与页码，等待用户重试。
+            currentCoroutineContext().ensureActive()
             _uiState.update { state ->
                 when {
                     state.activeKeyword != baseKeyword || state.searchEpoch != baseEpoch -> state
-                    addedAny || failed -> state.copy(loadingMore = false)
+                    failureMessage.isNotEmpty() -> state.copy(loadingMore = false, loadMoreError = failureMessage)
+                    addedAny -> state.copy(loadingMore = false)
                     else -> state.copy(
                         loadingMore = false,
                         paging = state.paging.mapValues { (_, value) -> value.copy(hasMore = false) },
@@ -272,6 +312,9 @@ class SearchViewModel(
 
     private fun firstError(fetched: Map<AppSource, Result<SearchPage>>): Throwable? =
         fetched.values.firstNotNullOfOrNull { it.exceptionOrNull() }
+
+    private suspend fun searchError(error: Throwable?): String =
+        error?.message?.takeIf { it.isNotBlank() } ?: getString(Res.string.search_failed)
 
     /** 同包名保留高版本；位置由先入者定，避免翻页补进来的条目把列表重排。 */
     private fun mergeApps(existing: List<MarketAppInfo>, incoming: List<MarketAppInfo>): List<MarketAppInfo> {
@@ -320,7 +363,6 @@ class SearchViewModel(
         else resolveActionKind(installedVersionCode, app.versionCode)
 
     fun removeHistory(keyword: String) {
-        _uiState.update { it.copy(selectedHistory = null) }
         viewModelScope.launch {
             historyStore.remove(keyword)
             reloadHistory()
@@ -358,13 +400,15 @@ class SearchViewModel(
     private fun startDownload(app: MarketAppInfo, update: Boolean) {
         if (app.isDownloadBlocked()) return
         if (!pendingDownloads.add(app.packageName)) return
-        viewModelScope.launch {
+        val keyword = _uiState.value.activeKeyword
+        // 已确认的下载操作独立于搜索页面；主线程串行维护待处理集合。
+        applicationScope.launch(Dispatchers.Main.immediate) {
             try {
                 runCatchingCancellable {
                     if (update) {
                         sources.downloadUpdateMeta(app.source, app)
                     } else {
-                        sources.downloadMeta(app.source, app, _uiState.value.keyword)
+                        sources.downloadMeta(app.source, app, keyword)
                     }
                 }
                     .onSuccess { downloads.start(it) }

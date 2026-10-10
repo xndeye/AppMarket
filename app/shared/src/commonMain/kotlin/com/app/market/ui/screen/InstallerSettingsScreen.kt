@@ -3,10 +3,12 @@ package com.app.market.ui.screen
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -40,11 +42,11 @@ import com.app.market.resources.installer_save_to_downloads
 import com.app.market.resources.installer_save_to_downloads_summary
 import com.app.market.resources.installer_section
 import com.app.market.ui.component.AppTextButton
+import com.app.market.ui.component.CardSegmentContainer
 import com.app.market.ui.component.MarketScaffold
 import com.app.market.ui.component.PageVerticalPadding
 import com.app.market.viewmodel.InstallerSettingsViewModel
 import org.jetbrains.compose.resources.stringResource
-import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.preference.RadioButtonLocation
 import top.yukonga.miuix.kmp.preference.RadioButtonPreference
@@ -60,6 +62,11 @@ fun InstallerSettingsScreen(
     onBack: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val selectedInstaller = state.installerCandidates.firstOrNull {
+        it.packageName == state.thirdPartyInstallerPackage
+    }
+    val deleteAfterInstall = state.mode == InstallerMode.THIRD_PARTY
+    val showNoUserAction = state.mode == InstallerMode.STANDARD && state.userActionNotRequiredConfigurable
 
     MarketScaffold(
         title = stringResource(Res.string.installer_section),
@@ -73,7 +80,7 @@ fun InstallerSettingsScreen(
                 .scrollEndHaptic()
                 .overScrollVertical()
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(0.dp),
             contentPadding = PaddingValues(
                 start = innerPadding.calculateStartPadding(layoutDirection) + 12.dp,
                 end = innerPadding.calculateEndPadding(layoutDirection) + 12.dp,
@@ -81,29 +88,38 @@ fun InstallerSettingsScreen(
                 bottom = innerPadding.calculateBottomPadding() + PageVerticalPadding,
             ),
         ) {
-            item(key = "mode") {
-                Card(modifier = Modifier.fillMaxWidth()) {
+            item(key = "mode_standard") {
+                CardSegmentContainer(isFirst = true, isLast = false, horizontalPadding = 0.dp) {
                     InstallerModeRow(
                         label = stringResource(Res.string.installer_mode_default),
                         summary = stringResource(Res.string.installer_mode_default_summary),
                         selected = state.mode == InstallerMode.STANDARD,
                         onClick = { viewModel.setMode(InstallerMode.STANDARD) },
                     )
+                }
+            }
+            item(key = "mode_root") {
+                CardSegmentContainer(isFirst = false, isLast = false, horizontalPadding = 0.dp) {
                     InstallerModeRow(
                         label = stringResource(Res.string.installer_mode_root),
                         summary = stringResource(Res.string.installer_mode_root_summary),
                         selected = state.mode == InstallerMode.ROOT,
                         onClick = { viewModel.setMode(InstallerMode.ROOT) },
                     )
+                }
+            }
+            item(key = "mode_shizuku") {
+                CardSegmentContainer(isFirst = false, isLast = false, horizontalPadding = 0.dp) {
                     InstallerModeRow(
                         label = stringResource(Res.string.installer_mode_shizuku),
                         summary = stringResource(Res.string.installer_mode_shizuku_summary),
                         selected = state.mode == InstallerMode.SHIZUKU,
                         onClick = { viewModel.setMode(InstallerMode.SHIZUKU) },
                     )
-                    val selectedInstaller = state.installerCandidates.firstOrNull {
-                        it.packageName == state.thirdPartyInstallerPackage
-                    }
+                }
+            }
+            item(key = "mode_third_party") {
+                CardSegmentContainer(isFirst = false, isLast = true, horizontalPadding = 0.dp) {
                     InstallerModeRow(
                         label = stringResource(Res.string.installer_mode_third_party),
                         summary = selectedInstaller?.label
@@ -113,10 +129,9 @@ fun InstallerSettingsScreen(
                     )
                 }
             }
-
+            item(key = "options_spacing") { Spacer(Modifier.height(20.dp)) }
             item(key = "save") {
-                val deleteAfterInstall = state.mode == InstallerMode.THIRD_PARTY
-                Card(modifier = Modifier.fillMaxWidth()) {
+                CardSegmentContainer(isFirst = true, isLast = !showNoUserAction, horizontalPadding = 0.dp) {
                     SwitchPreference(
                         title = stringResource(
                             if (deleteAfterInstall) {
@@ -137,10 +152,11 @@ fun InstallerSettingsScreen(
                             viewModel.setSaveToDownloads(if (deleteAfterInstall) !checked else checked)
                         },
                     )
-                    if (
-                        state.mode == InstallerMode.STANDARD &&
-                        state.userActionNotRequiredConfigurable
-                    ) {
+                }
+            }
+            if (showNoUserAction) {
+                item(key = "no_user_action") {
+                    CardSegmentContainer(isFirst = false, isLast = true, horizontalPadding = 0.dp) {
                         SwitchPreference(
                             title = stringResource(Res.string.installer_no_user_action),
                             summary = stringResource(Res.string.installer_no_user_action_summary),
@@ -150,7 +166,6 @@ fun InstallerSettingsScreen(
                     }
                 }
             }
-
         }
     }
 

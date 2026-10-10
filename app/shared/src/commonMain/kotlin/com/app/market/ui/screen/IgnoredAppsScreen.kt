@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -176,7 +175,6 @@ private fun IgnoredAppRow(
         AppCompactButton(
             text = stringResource(Res.string.restore),
             onClick = { onRestore(entry) },
-            modifier = Modifier.width(70.dp),
         )
     }
 }

@@ -25,6 +25,7 @@ import com.app.market.ui.screen.UpdateHistoryScreen
 import com.app.market.viewmodel.AppDetailViewModel
 import com.app.market.viewmodel.DeviceProfileViewModel
 import com.app.market.viewmodel.DownloadingAppsViewModel
+import com.app.market.viewmodel.GamesViewModel
 import com.app.market.viewmodel.HistoricalVersionsViewModel
 import com.app.market.viewmodel.IgnoredAppsViewModel
 import com.app.market.viewmodel.InstallerSettingsViewModel
@@ -55,9 +56,9 @@ fun AppNavigation(
     val backStack = rememberNavBackStack<Route>(Route.Main)
     val navigator = remember { Navigator(backStack) }
     val updatesViewModel = koinViewModel<UpdatesViewModel>()
-    val searchViewModel = koinViewModel<SearchViewModel>()
     val installerSettingsViewModel = koinViewModel<InstallerSettingsViewModel>()
     val recommendedViewModel = koinViewModel<RecommendedViewModel>()
+    val gamesViewModel = koinViewModel<GamesViewModel>()
     val swipeBackDirection = if (LocalLayoutDirection.current == LayoutDirection.Rtl) {
         NavSwipeDirection.RightToLeft
     } else {
@@ -112,9 +113,11 @@ fun AppNavigation(
                     updatesViewModel = updatesViewModel,
                     installerSettingsViewModel = installerSettingsViewModel,
                     recommendedViewModel = recommendedViewModel,
+                    gamesViewModel = gamesViewModel,
                 )
             }
             entry<Route.Search>(swipeDismiss = swipeBackDirection) { route ->
+                val searchViewModel = koinViewModel<SearchViewModel>()
                 SearchScreen(
                     viewModel = searchViewModel,
                     initialKeyword = route.keyword,

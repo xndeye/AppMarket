@@ -12,6 +12,9 @@ import com.app.market.domain.model.installed.InstalledPackage
 import com.app.market.domain.model.market.AppDetail
 import com.app.market.domain.model.market.AppScreenshot
 import com.app.market.domain.model.market.AppSource
+import com.app.market.domain.model.market.GameCatalog
+import com.app.market.domain.model.market.GamePage
+import com.app.market.domain.model.market.GameQuery
 import com.app.market.domain.model.market.MarketAppInfo
 import com.app.market.domain.model.market.ScreenshotOrientation
 import com.app.market.domain.model.market.SearchPage
@@ -38,6 +41,31 @@ internal class TapTapRepositoryImpl(
     private val recordsByPackage = mutableMapOf<String, TapTapAppRecord>()
     private val recordsById = mutableMapOf<Long, TapTapAppRecord>()
     private val recommendationsById = mutableMapOf<Long, TapTapRecommendationRecord>()
+    override var cachedGameCategories: GameCatalog? = null
+        private set
+
+    override suspend fun getGameCategories(): GameCatalog = withContext(Dispatchers.Default) {
+        api.getGameCategories().also { cachedGameCategories = it }
+    }
+
+    override suspend fun getCategoryGames(query: GameQuery, nextPage: String, sessionId: String): GamePage =
+        withContext(Dispatchers.Default) {
+            val page = api.getCategoryGames(query, nextPage, sessionId)
+            val deliveries = api.apps(page.items.map { it.app.packageName })
+                .associateBy { it.packageName.lowercase() }
+            GamePage(
+                items = page.items.map { item ->
+                    val record = item.app.withDelivery(deliveries[item.app.packageName.lowercase()])
+                    remember(record)
+                    val app = record.toApp().copy(isAd = item.isAd)
+                    val installed = app.packageName.takeIf(String::isNotBlank)?.let { installedPackages.installedPackage(it) }
+                    if (installed == null) app else app.withInstalled(installed)
+                },
+                hasMore = page.hasMore,
+                nextPage = page.nextPage,
+                sessionId = page.sessionId,
+            )
+        }
 
     override suspend fun search(keyword: String, page: Int): SearchPage = withContext(Dispatchers.Default) {
         val (hits, hasMore) = api.search(keyword, page)
@@ -62,7 +90,7 @@ internal class TapTapRepositoryImpl(
         val delivery = api.apps(listOf(detail.app.packageName)).firstOrNull()
         val merged = detail.app.withDelivery(delivery)
         remember(merged)
-        val installed = installedPackages.installedPackage(merged.packageName)
+        val installed = merged.packageName.takeIf(String::isNotBlank)?.let { installedPackages.installedPackage(it) }
         detail.toAppDetail(
             if (installed == null) merged.toApp() else merged.toApp().withInstalled(installed),
         )
@@ -190,6 +218,7 @@ internal class TapTapRepositoryImpl(
         }
 
     private suspend fun downloadMetaOf(app: MarketAppInfo, apkHash: String = ""): DownloadMeta {
+        if (app.packageName.isBlank()) throw MarketException("TapTap 暂未提供该游戏的 Android 安装包")
         val record = api.apps(listOf(app.packageName)).firstOrNull()
             ?: recordsByPackage[app.packageName.lowercase()]
             ?: throw MarketException("TapTap 未收录该应用")
@@ -224,7 +253,7 @@ internal class TapTapRepositoryImpl(
     }
 
     private fun remember(record: TapTapAppRecord) {
-        recordsByPackage[record.packageName.lowercase()] = record
+        if (record.packageName.isNotBlank()) recordsByPackage[record.packageName.lowercase()] = record
         if (record.appId > 0L) recordsById[record.appId] = record
     }
 
@@ -238,6 +267,7 @@ internal class TapTapRepositoryImpl(
         icon = icon,
         apkSize = apkSize,
         ratingScore = rating,
+        downloadBlockReason = if (apkId <= 0L || packageName.isBlank()) "TapTap 暂未提供该游戏的 Android 安装包" else "",
         changeLog = changeLog,
         openLink = "https://www.taptap.cn/app/$appId",
         source = AppSource.TAPTAP,

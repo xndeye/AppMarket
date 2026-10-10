@@ -72,6 +72,7 @@
     <string name="search_failed">搜索失败</string>
     <string name="search_history">搜索历史</string>
     <string name="clear_history">清除历史</string>
+    <string name="remove_search_history">删除搜索历史：%1$s</string>
 
     <!-- Settings -->
     <string name="settings">设置</string>
@@ -112,7 +113,7 @@
     <string name="recommended_source">推荐来源</string>
     <string name="recommended_source_summary">用于推荐页的内容</string>
     <string name="source_xiaomi">小米</string>
-    <string name="source_vivo">VIVO</string>
+    <string name="source_vivo">vivo</string>
     <string name="source_wandoujia">豌豆荚</string>
     <string name="source_oppo">OPPO</string>
     <string name="source_samsung">三星</string>
@@ -125,11 +126,11 @@
     <string name="no_historical_versions">暂无历史版本</string>
     <string name="retry">重试</string>
     <string name="show_app_comments">显示用户评论</string>
-    <string name="show_app_comments_summary">当前搜索来源提供评论时，在详情页显示</string>
+    <string name="show_app_comments_summary">应用所属来源提供评论时，在详情页显示</string>
     <string name="show_same_developer">显示同开发者应用</string>
-    <string name="show_same_developer_summary">当前搜索来源提供同开发者列表时，在详情页显示</string>
+    <string name="show_same_developer_summary">应用所属来源提供同开发者列表时，在详情页显示</string>
     <string name="show_promotions">显示优惠活动</string>
-    <string name="show_promotions_summary">当前搜索来源提供优惠活动时，在详情页显示</string>
+    <string name="show_promotions_summary">应用所属来源提供优惠活动时，在详情页显示</string>
     <string name="manual_update">手动检查更新</string>
     <string name="manual_update_summary">按包名与版本号查询单个应用的更新</string>
     <string name="manual_update_package">包名（packageName）</string>
@@ -247,7 +248,6 @@
     <string name="no_saved_packages">暂无保存的安装包</string>
     <string name="settings_section_download_install">下载与安装</string>
     <string name="downloading_apps">下载中的应用</string>
-    <string name="downloading_apps_summary">查看和管理进行中的下载任务</string>
     <string name="downloading_apps_empty">暂无下载任务</string>
     <string name="download_ready">待安装</string>
     <string name="download_finished">已完成</string>
@@ -263,4 +263,15 @@
     <string name="image_saved">已保存到 Pictures/AppMarket</string>
     <string name="image_save_failed">保存图片失败</string>
     <string name="image_save_unsupported">保存图片仅在 Android 上可用</string>
+    <string name="nav_games">游戏</string>
+    <string name="games_filters">筛选</string>
+    <string name="games_status">状态</string>
+    <string name="games_apk_size">大小</string>
+    <string name="games_load_more">加载更多</string>
+    <string name="games_reset">重置</string>
+    <string name="comments_load_failed">评论加载失败：%1$s</string>
+    <string name="same_developer_load_failed">同开发者应用加载失败：%1$s</string>
+    <string name="games_view_results">查看结果</string>
+    <string name="games_unlimited">不限</string>
+    <string name="games_rating">游戏评分</string>
 </resources>

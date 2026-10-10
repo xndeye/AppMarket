@@ -1,17 +1,9 @@
 package com.app.market.ui.screen
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
-import androidx.compose.animation.expandHorizontally
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -57,11 +49,16 @@ import com.app.market.resources.clear_history
 import com.app.market.resources.nav_search
 import com.app.market.resources.no_results
 import com.app.market.resources.open
+import com.app.market.resources.remove_search_history
 import com.app.market.resources.reserve
+import com.app.market.resources.retry
 import com.app.market.resources.search_hint
 import com.app.market.resources.search_history
 import com.app.market.resources.update
+import com.app.market.ui.component.AppButton
+import com.app.market.ui.component.AppButtonText
 import com.app.market.ui.component.AppRow
+import com.app.market.ui.component.AppTextButton
 import com.app.market.ui.component.LoadingBox
 import com.app.market.ui.component.MarketScaffold
 import com.app.market.ui.component.PageVerticalPadding
@@ -76,7 +73,10 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.InputField
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.TabRowDefaults
@@ -84,7 +84,6 @@ import top.yukonga.miuix.kmp.basic.TabRowWithContour
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Close
-import top.yukonga.miuix.kmp.squircle.squircleSurface
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
@@ -121,7 +120,8 @@ fun SearchScreen(
             val info = listState.layoutInfo
             val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: -1
             lastVisible >= 0 && info.totalItemsCount > 0 && lastVisible >= info.totalItemsCount - 3 &&
-                    !currentState.loading && currentState.hasMore && currentState.errorMessage.isBlank()
+                    !currentState.loading && currentState.hasMore &&
+                    currentState.errorMessage.isBlank() && currentState.loadMoreError.isBlank()
         }
             .distinctUntilChanged()
             .collect { atBottom -> if (atBottom) viewModel.loadMore() }
@@ -144,7 +144,7 @@ fun SearchScreen(
     LaunchedEffect(initialKeyword) {
         val keyword = initialKeyword?.trim().orEmpty()
         if (keyword.isNotEmpty()) {
-            viewModel.searchWith(keyword)
+            viewModel.searchInitialKeyword(keyword)
             dismissSearchInput()
         } else {
             searchExpanded = true
@@ -195,9 +195,6 @@ fun SearchScreen(
                         backgroundColor = MiuixTheme.colorScheme.surfaceContainer,
                         selectedBackgroundColor = MiuixTheme.colorScheme.surface,
                     ),
-                    minWidth = 88.dp,
-                    maxWidth = 116.dp,
-                    height = 40.dp,
                 )
             }
         },
@@ -268,101 +265,31 @@ private fun SearchResultsList(
             .scrollEndHaptic()
             .overScrollVertical()
             .nestedScroll(scrollBehavior.nestedScrollConnection),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
         contentPadding = contentPadding,
     ) {
-        // Compact spinner only for a re-search (results present) — a fresh search uses the centered
-        // full-screen one; the gate also prevents a stray spinner mid-Crossfade (loading true, no results).
-        if (state.loading && state.results.isNotEmpty()) item(key = "loading") { LoadingBox() }
         if (state.errorMessage.isNotEmpty()) {
             item(key = "error") {
-                Text(
-                    state.errorMessage,
-                    color = MiuixTheme.colorScheme.onErrorContainer,
-                    modifier = Modifier.padding(horizontal = 4.dp)
-                )
+                SearchError(state.errorMessage, viewModel::retrySearch)
             }
         } else if (state.showNoResults) {
             item(key = "empty") {
                 Text(
                     noResults,
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                    modifier = Modifier.padding(horizontal = 4.dp)
+                    modifier = Modifier.padding(horizontal = 16.dp),
                 )
             }
         }
 
-        if (state.results.isEmpty() && state.keyword.isBlank() && state.history.isNotEmpty()) {
+        if (state.activeKeyword.isBlank() && state.history.isNotEmpty()) {
             item(key = "history") {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            stringResource(Res.string.search_history),
-                            style = MiuixTheme.textStyles.title4,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            text = stringResource(Res.string.clear_history),
-                            style = MiuixTheme.textStyles.body2,
-                            color = MiuixTheme.colorScheme.primary,
-                            modifier = Modifier.clickable(
-                                interactionSource = null,
-                                indication = null,
-                                onClick = viewModel::clearHistory,
-                            ),
-                        )
-                    }
-                    FlowRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        state.history.forEach { item ->
-                            val selected = state.selectedHistory == item
-                            Box(
-                                modifier = Modifier
-                                    .squircleSurface(
-                                        color = MiuixTheme.colorScheme.surfaceContainer,
-                                        cornerRadius = 14.dp,
-                                    )
-                                    .combinedClickable(
-                                        onClick = { onSearchHistory(item) },
-                                        onLongClick = { viewModel.selectHistory(item) },
-                                    ),
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Text(item, style = MiuixTheme.textStyles.body1)
-                                    AnimatedVisibility(
-                                        visible = selected,
-                                        enter = expandHorizontally(expandFrom = Alignment.Start) + fadeIn(),
-                                        exit = shrinkHorizontally(shrinkTowards = Alignment.Start) + fadeOut(),
-                                    ) {
-                                        Icon(
-                                            imageVector = MiuixIcons.Close,
-                                            contentDescription = null,
-                                            tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                            modifier = Modifier
-                                                .clickable(
-                                                    interactionSource = null,
-                                                    indication = null,
-                                                    onClick = { viewModel.removeHistory(item) },
-                                                )
-                                                .padding(start = 8.dp)
-                                                .size(13.dp),
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                SearchHistoryCard(
+                    history = state.history,
+                    onSearch = onSearchHistory,
+                    onRemove = viewModel::removeHistory,
+                    onClear = viewModel::clearHistory,
+                )
             }
         }
 
@@ -395,6 +322,88 @@ private fun SearchResultsList(
 
         if (state.loadingMore) {
             item(key = "loadmore") { LoadingBox() }
+        } else if (state.loadMoreError.isNotEmpty()) {
+            item(key = "loadmore_error") {
+                SearchError(state.loadMoreError, viewModel::loadMore)
+            }
         }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SearchHistoryCard(
+    history: List<String>,
+    onSearch: (String) -> Unit,
+    onRemove: (String) -> Unit,
+    onClear: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        insideMargin = PaddingValues(16.dp),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(Res.string.search_history),
+                    style = MiuixTheme.textStyles.title4,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+                AppTextButton(
+                    text = stringResource(Res.string.clear_history),
+                    onClick = onClear,
+                    minWidth = 0.dp,
+                    minHeight = 32.dp,
+                    insideMargin = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                )
+            }
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                history.forEach { keyword ->
+                    AppButton(
+                        onClick = { onSearch(keyword) },
+                        minWidth = 0.dp,
+                        minHeight = 40.dp,
+                        insideMargin = PaddingValues(start = 12.dp, end = 4.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            color = MiuixTheme.colorScheme.surfaceContainer,
+                        ),
+                    ) {
+                        AppButtonText(keyword, modifier = Modifier.weight(1f, fill = false))
+                        IconButton(
+                            onClick = { onRemove(keyword) },
+                            modifier = Modifier.size(28.dp),
+                        ) {
+                            Icon(
+                                imageVector = MiuixIcons.Close,
+                                contentDescription = stringResource(Res.string.remove_search_history, keyword),
+                                tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                                modifier = Modifier.size(14.dp),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SearchError(message: String, onRetry: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(message, color = MiuixTheme.colorScheme.error)
+        AppTextButton(text = stringResource(Res.string.retry), onClick = onRetry)
     }
 }

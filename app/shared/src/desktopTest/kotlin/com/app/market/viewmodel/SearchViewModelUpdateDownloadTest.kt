@@ -26,6 +26,7 @@ import com.app.market.platform.ImageSaveResult
 import com.app.market.platform.UiPlatform
 import com.app.market.ui.model.AppActionKind
 import com.app.market.ui.model.SearchResultItem
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -50,7 +51,7 @@ class SearchViewModelUpdateDownloadTest {
         try {
             val sources = RecordingSearchSources()
             val downloads = RecordingDownloads()
-            val viewModel = searchViewModel(sources, downloads)
+            val viewModel = searchViewModel(sources, downloads, this)
             advanceUntilIdle()
 
             viewModel.onAction(SearchResultItem(honorApp(), AppActionKind.UPDATE))
@@ -70,7 +71,7 @@ class SearchViewModelUpdateDownloadTest {
         try {
             val sources = RecordingSearchSources()
             val downloads = RecordingDownloads()
-            val viewModel = searchViewModel(sources, downloads)
+            val viewModel = searchViewModel(sources, downloads, this)
             advanceUntilIdle()
 
             viewModel.onAction(SearchResultItem(honorApp(), AppActionKind.INSTALL))
@@ -87,6 +88,7 @@ class SearchViewModelUpdateDownloadTest {
     private fun searchViewModel(
         sources: RecordingSearchSources,
         downloads: RecordingDownloads,
+        applicationScope: CoroutineScope,
     ) = SearchViewModel(
         sources = sources,
         historyStore = EmptySearchHistory,
@@ -94,6 +96,7 @@ class SearchViewModelUpdateDownloadTest {
         packages = EmptyPackages,
         downloads = downloads,
         uiPlatform = SilentUiPlatform,
+        applicationScope = applicationScope,
     )
 
     private fun honorApp() = MarketAppInfo(

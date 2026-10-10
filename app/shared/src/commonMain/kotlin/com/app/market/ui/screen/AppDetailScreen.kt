@@ -126,6 +126,7 @@ import com.app.market.resources.introduction
 import com.app.market.resources.more_options
 import com.app.market.resources.no_other_app_store
 import com.app.market.resources.num_comments
+import com.app.market.resources.retry
 import com.app.market.resources.open
 import com.app.market.resources.open_in_other_app_store
 import com.app.market.resources.open_link_failed
@@ -146,6 +147,7 @@ import com.app.market.ui.component.AppActionButton
 import com.app.market.ui.component.AppAsyncImage
 import com.app.market.ui.component.AppButton
 import com.app.market.ui.component.AppIcon
+import com.app.market.ui.component.AppTextButton
 import com.app.market.ui.component.AppVideoViewer
 import com.app.market.ui.component.CollapsibleMarketScaffold
 import com.app.market.ui.component.LoadingBox
@@ -249,7 +251,7 @@ fun AppDetailScreen(
     val currentDownloadState = remember(currentPackageName) {
         derivedStateOf { currentPackageName?.let { downloadStates.value[it] } }
     }
-    val canRedownload = current != null && currentActionKind == AppActionKind.OPEN
+    val canRedownload = current != null && currentActionKind == AppActionKind.OPEN && !current.app.isDownloadBlocked()
     val canCancelDownload by remember(currentDownloadState) {
         derivedStateOf { currentDownloadState.value?.isComplete == false }
     }
@@ -431,15 +433,24 @@ fun AppDetailScreen(
                         DetailPhase.Error -> Box(
                             modifier = Modifier
                                 .fillMaxSize()
+                                .padding(contentPadding)
                                 .padding(horizontal = 32.dp),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Text(
-                                text = state.errorMessage,
-                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                style = MiuixTheme.textStyles.main,
-                                textAlign = TextAlign.Center,
-                            )
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Text(
+                                    text = state.errorMessage,
+                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                                    style = MiuixTheme.textStyles.main,
+                                    textAlign = TextAlign.Center,
+                                )
+                                AppTextButton(stringResource(Res.string.retry), {
+                                    viewModel.load(appId, packageName, externalQuery, source)
+                                }, enabled = !state.loading)
+                            }
                         }
 
                         DetailPhase.Content -> current?.let { detail ->
@@ -449,6 +460,10 @@ fun AppDetailScreen(
                                 showComments = showComments,
                                 showSameDeveloper = showSameDeveloper,
                                 showPromotions = showPromotions,
+                                commentsLoading = state.commentsLoading,
+                                commentsError = state.commentsError,
+                                sameDeveloperLoading = state.sameDeveloperLoading,
+                                sameDeveloperError = state.sameDeveloperError,
                                 contentPadding = contentPadding,
                                 scrollBehavior = scrollBehavior,
                                 viewModel = viewModel,
@@ -504,6 +519,10 @@ private fun AppDetailContent(
     showComments: Boolean,
     showSameDeveloper: Boolean,
     showPromotions: Boolean,
+    commentsLoading: Boolean,
+    commentsError: String,
+    sameDeveloperLoading: Boolean,
+    sameDeveloperError: String,
     contentPadding: PaddingValues,
     scrollBehavior: ScrollBehavior,
     viewModel: AppDetailViewModel,
@@ -562,6 +581,16 @@ private fun AppDetailContent(
         contentPadding = contentPadding,
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
+        if (current.app.isDownloadBlocked()) {
+            item(key = "download_block_reason") {
+                Text(
+                    text = current.app.downloadBlockReason,
+                    style = MiuixTheme.textStyles.body2,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    modifier = Modifier.padding(horizontal = 28.dp),
+                )
+            }
+        }
         item(key = "stats") {
             AppDetailStatsRow(
                 rating = formatRating(current.app.ratingScore),
@@ -657,7 +686,21 @@ private fun AppDetailContent(
             }
         }
 
-        if (showComments && current.comments.isNotEmpty()) {
+        if (showComments && current.app.source.capabilities.supportsComments &&
+            (commentsLoading || commentsError.isNotBlank())) {
+            item(key = "comments_status") {
+                DetailSection(title = commentsTitle) {
+                    if (commentsLoading) {
+                        LoadingBox()
+                    } else {
+                        Column(Modifier.padding(horizontal = 28.dp)) {
+                            Text(commentsError, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+                            AppTextButton(stringResource(Res.string.retry), viewModel::loadComments)
+                        }
+                    }
+                }
+            }
+        } else if (showComments && current.app.source.capabilities.supportsComments && current.comments.isNotEmpty()) {
             item(key = "comments") {
                 val displayedComments = current.comments.take(2)
                 DetailSection(
@@ -708,7 +751,21 @@ private fun AppDetailContent(
                         !it.packageName.equals(current.app.packageName, ignoreCase = true)
             }
             .take(3)
-        if (showSameDeveloper && sameDeveloper.isNotEmpty()) {
+        if (showSameDeveloper && current.app.source.capabilities.supportsSameDeveloperApps &&
+            (sameDeveloperLoading || sameDeveloperError.isNotBlank())) {
+            item(key = "samedev_status") {
+                DetailSection(title = sameDeveloperTitle) {
+                    if (sameDeveloperLoading) {
+                        LoadingBox()
+                    } else {
+                        Column(Modifier.padding(horizontal = 28.dp)) {
+                            Text(sameDeveloperError, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+                            AppTextButton(stringResource(Res.string.retry), viewModel::loadSameDeveloper)
+                        }
+                    }
+                }
+            }
+        } else if (showSameDeveloper && current.app.source.capabilities.supportsSameDeveloperApps && sameDeveloper.isNotEmpty()) {
             item(key = "samedev") {
                 DetailSection(
                     title = sameDeveloperTitle,

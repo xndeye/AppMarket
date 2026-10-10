@@ -60,6 +60,7 @@ import com.app.market.domain.model.market.MarketAppInfo
 import com.app.market.domain.model.recommended.RecommendedArticle
 import com.app.market.domain.model.recommended.RecommendedFeaturedItem
 import com.app.market.resources.Res
+import com.app.market.resources.downloading_apps
 import com.app.market.resources.golden_award
 import com.app.market.resources.nav_recommended
 import com.app.market.resources.num_updates_pending
@@ -79,13 +80,17 @@ import com.app.market.viewmodel.RecommendedViewModel
 import com.app.market.viewmodel.UpdatesViewModel
 import kotlinx.coroutines.flow.distinctUntilChanged
 import org.jetbrains.compose.resources.stringResource
+import top.yukonga.miuix.kmp.basic.Badge
+import top.yukonga.miuix.kmp.basic.BadgedBox
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
-import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Download
 import top.yukonga.miuix.kmp.icon.extended.Search
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
@@ -101,6 +106,8 @@ fun RecommendedTab(
     bottomPadding: Dp,
     onClickArticle: (RecommendedArticle) -> Unit,
     onOpenSearch: () -> Unit,
+    activeDownloadCount: Int,
+    onOpenDownloads: () -> Unit,
     updatesViewModel: UpdatesViewModel? = null,
     onClickViewUpdates: () -> Unit = {},
 ) {
@@ -163,8 +170,10 @@ fun RecommendedTab(
                         bottom = bottomPadding + PageVerticalPadding,
                     ),
                 ) {
-                    SearchEntry(
-                        onClick = onOpenSearch,
+                    SearchEntryRow(
+                        onOpenSearch = onOpenSearch,
+                        onOpenDownloads = onOpenDownloads,
+                        activeDownloadCount = activeDownloadCount,
                         modifier = Modifier.fillMaxWidth(),
                     )
                     LoadingBox(Modifier.fillMaxSize())
@@ -191,8 +200,10 @@ fun RecommendedTab(
                     key = "search",
                     span = { GridItemSpan(maxLineSpan) },
                 ) {
-                    SearchEntry(
-                        onClick = onOpenSearch,
+                    SearchEntryRow(
+                        onOpenSearch = onOpenSearch,
+                        onOpenDownloads = onOpenDownloads,
+                        activeDownloadCount = activeDownloadCount,
                         modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp),
                     )
                 }
@@ -263,6 +274,36 @@ fun RecommendedTab(
 }
 
 @Composable
+private fun SearchEntryRow(
+    onOpenSearch: () -> Unit,
+    onOpenDownloads: () -> Unit,
+    activeDownloadCount: Int,
+    modifier: Modifier,
+) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        SearchEntry(onClick = onOpenSearch, modifier = Modifier.weight(1f))
+        IconButton(onClick = onOpenDownloads, modifier = Modifier.size(48.dp)) {
+            BadgedBox(badge = {
+                if (activeDownloadCount > 0) {
+                    Badge { Text(activeDownloadCount.toString()) }
+                }
+            }) {
+                Icon(
+                    imageVector = MiuixIcons.Download,
+                    contentDescription = stringResource(Res.string.downloading_apps),
+                    tint = MiuixTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(28.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun SearchEntry(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -287,6 +328,8 @@ private fun SearchEntry(
                 text = stringResource(Res.string.search_hint),
                 color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 style = MiuixTheme.textStyles.body1,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }

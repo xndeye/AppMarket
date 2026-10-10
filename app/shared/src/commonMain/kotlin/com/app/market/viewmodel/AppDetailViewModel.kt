@@ -16,6 +16,9 @@ import com.app.market.domain.repository.MarketSourceRepository
 import com.app.market.domain.repository.PackageRepository
 import com.app.market.domain.repository.UpdatePreferencesRepository
 import com.app.market.platform.UiPlatform
+import com.app.market.resources.Res
+import com.app.market.resources.comments_load_failed
+import com.app.market.resources.same_developer_load_failed
 import com.app.market.ui.model.AppActionKind
 import com.app.market.ui.model.actionKind
 import kotlinx.coroutines.CancellationException
@@ -27,6 +30,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
+import org.jetbrains.compose.resources.getString
 
 const val APP_NOT_LISTED_MESSAGE = "应用商店尚未收录此应用"
 
@@ -37,6 +41,10 @@ data class AppDetailUiState(
     val detail: AppDetail? = null,
     /** Primary action for [detail]; derived from the app's resolved installed version (no I/O). */
     val actionKind: AppActionKind? = null,
+    val commentsLoading: Boolean = false,
+    val commentsError: String = "",
+    val sameDeveloperLoading: Boolean = false,
+    val sameDeveloperError: String = "",
 )
 
 class AppDetailViewModel(
@@ -84,7 +92,7 @@ class AppDetailViewModel(
                 _uiState.update {
                     it.copy(loading = false, detail = detail, actionKind = detail.app.actionKind())
                 }
-                loadOptionalSections(source, detail)
+                loadOptionalSections()
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Throwable) {
@@ -95,32 +103,52 @@ class AppDetailViewModel(
         }
     }
 
-    private fun loadOptionalSections(source: AppSource, detail: AppDetail) {
+    private fun loadOptionalSections() {
         viewModelScope.launch {
             prefs.initialized.first { it }
-            supervisorScope {
-                if (prefs.showAppComments.value) launch {
-                    runCatchingCancellable { sources.appComments(source, detail.app) }
-                        .onSuccess { comments ->
-                            updateCurrentDetail(detail) {
-                                it.copy(
-                                    comments = comments.items,
-                                    commentCount = maxOf(it.commentCount, comments.totalCount),
-                                )
-                            }
-                        }
-                }
-                if (prefs.showSameDeveloper.value) launch {
-                    runCatchingCancellable { sources.sameDeveloperApps(source, detail.app) }
-                        .onSuccess { apps -> updateCurrentDetail(detail) { it.copy(sameDeveloperApps = apps) } }
+            if (prefs.showAppComments.value) loadComments()
+            if (prefs.showSameDeveloper.value) loadSameDeveloper()
+        }
+    }
+
+    fun loadComments() {
+        val state = _uiState.value
+        val detail = state.detail ?: return
+        if (state.commentsLoading || !detail.app.source.capabilities.supportsComments || !prefs.showAppComments.value) return
+        _uiState.update { it.copy(commentsLoading = true, commentsError = "") }
+        viewModelScope.launch {
+            val result = runCatchingCancellable { sources.appComments(detail.app.source, detail.app) }
+            result.onSuccess { comments ->
+                updateCurrentDetail(detail) {
+                    it.copy(comments = comments.items, commentCount = maxOf(it.commentCount, comments.totalCount))
                 }
             }
+            val message = result.exceptionOrNull()?.let {
+                getString(Res.string.comments_load_failed, it.message ?: it.toString())
+            }.orEmpty()
+            _uiState.update { it.copy(commentsLoading = false, commentsError = message) }
+        }
+    }
+
+    fun loadSameDeveloper() {
+        val state = _uiState.value
+        val detail = state.detail ?: return
+        if (state.sameDeveloperLoading || !detail.app.source.capabilities.supportsSameDeveloperApps || !prefs.showSameDeveloper.value) return
+        _uiState.update { it.copy(sameDeveloperLoading = true, sameDeveloperError = "") }
+        viewModelScope.launch {
+            val result = runCatchingCancellable { sources.sameDeveloperApps(detail.app.source, detail.app) }
+            result.onSuccess { apps -> updateCurrentDetail(detail) { it.copy(sameDeveloperApps = apps) } }
+            val message = result.exceptionOrNull()?.let {
+                getString(Res.string.same_developer_load_failed, it.message ?: it.toString())
+            }.orEmpty()
+            _uiState.update { it.copy(sameDeveloperLoading = false, sameDeveloperError = message) }
         }
     }
 
     /** 匿名第三方商店不认识本机，已安装版本得自己补，否则已装应用会显示成「安装」。 */
     private suspend fun AppDetail.withInstalledState(): AppDetail {
         val name = app.packageName
+        if (name.isBlank()) return this
         val installedVersionCode = packages.installedVersionCodes(listOf(name))[name] ?: 0L
         if (installedVersionCode <= 0L) return this
         return copy(

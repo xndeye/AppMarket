@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -238,11 +237,7 @@ fun RelatedAppRow(
         )
         Spacer(Modifier.width(8.dp))
         Box(modifier = Modifier.weight(1f)) {
-            Column(
-                modifier = Modifier
-                    .widthIn(max = 195.dp)
-                    .fillMaxWidth(),
-            ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = appDisplayName(title, app.source),
                     color = MiuixTheme.colorScheme.onSurface,

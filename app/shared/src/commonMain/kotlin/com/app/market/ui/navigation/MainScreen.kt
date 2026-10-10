@@ -45,11 +45,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
+import com.app.market.domain.model.download.DownloadPhase
 import com.app.market.domain.model.market.MarketAppInfo
 import com.app.market.domain.model.preference.HomePage
+import com.app.market.domain.repository.DownloadRepository
 import com.app.market.domain.repository.ThemePreferencesRepository
 import com.app.market.platform.UiPlatform
 import com.app.market.resources.Res
+import com.app.market.resources.nav_games
 import com.app.market.resources.nav_recommended
 import com.app.market.resources.nav_settings
 import com.app.market.resources.nav_updates
@@ -57,6 +60,7 @@ import com.app.market.ui.component.FloatingBottomBar
 import com.app.market.ui.component.FloatingBottomBarItem
 import com.app.market.ui.component.blur.BlurredBar
 import com.app.market.ui.component.blur.rememberBlurBackdrop
+import com.app.market.ui.screen.GamesTab
 import com.app.market.ui.screen.RecommendedTab
 import com.app.market.ui.screen.SettingsTab
 import com.app.market.ui.screen.UpdatesTab
@@ -64,6 +68,7 @@ import com.app.market.ui.theme.LocalEnableFloatingBottomBar
 import com.app.market.ui.theme.LocalEnableFloatingBottomBarBlur
 import com.app.market.ui.theme.LocalEnableNavigationBadge
 import com.app.market.ui.util.rememberIsWideScreen
+import com.app.market.viewmodel.GamesViewModel
 import com.app.market.viewmodel.InstallerSettingsViewModel
 import com.app.market.viewmodel.RecommendedViewModel
 import com.app.market.viewmodel.UpdatesViewModel
@@ -88,13 +93,14 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Create
+import top.yukonga.miuix.kmp.icon.extended.GridView
 import top.yukonga.miuix.kmp.icon.extended.Settings
 import top.yukonga.miuix.kmp.icon.extended.Update
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import kotlin.math.abs
 
 // 主页签集合按平台能力裁剪：桌面端（无法扫描已装应用 / 安装）不含「更新」。
-private enum class MainTab { Recommended, Updates, Settings }
+private enum class MainTab { Recommended, Games, Updates, Settings }
 
 @Composable
 fun MainPage(
@@ -102,9 +108,23 @@ fun MainPage(
     updatesViewModel: UpdatesViewModel,
     installerSettingsViewModel: InstallerSettingsViewModel,
     recommendedViewModel: RecommendedViewModel,
+    gamesViewModel: GamesViewModel,
 ) {
     val uiPlatform = koinInject<UiPlatform>()
     val themePreferences = koinInject<ThemePreferencesRepository>()
+    val downloads = koinInject<DownloadRepository>()
+    val downloadStates = downloads.states.collectAsStateWithLifecycle()
+    val activeDownloadCount by remember(downloadStates) {
+        derivedStateOf {
+            downloadStates.value.values.count {
+                when (it.phase) {
+                    DownloadPhase.QUEUED, DownloadPhase.DOWNLOADING, DownloadPhase.PAUSED,
+                    DownloadPhase.INSTALLING, DownloadPhase.AWAITING_USER_ACTION -> true
+                    DownloadPhase.DOWNLOADED, DownloadPhase.FAILED -> false
+                }
+            }
+        }
+    }
     val preferencesInitialized by themePreferences.initialized.collectAsStateWithLifecycle()
     val enableFloatingBottomBar = LocalEnableFloatingBottomBar.current
     val enableFloatingBottomBarBlur = LocalEnableFloatingBottomBarBlur.current
@@ -113,6 +133,7 @@ fun MainPage(
     val tabs = remember(appManagementSupported) {
         buildList {
             add(MainTab.Recommended)
+            add(MainTab.Games)
             if (appManagementSupported) add(MainTab.Updates)
             add(MainTab.Settings)
         }
@@ -171,6 +192,8 @@ fun MainPage(
             when (tabs[page]) {
                 MainTab.Recommended -> RecommendedTab(
                     viewModel = recommendedViewModel,
+                    activeDownloadCount = activeDownloadCount,
+                    onOpenDownloads = { navigator.push(Route.DownloadingApps) },
                     updatesViewModel = updatesViewModel.takeIf { appManagementSupported },
                     bottomPadding = bottomPadding,
                     onClickViewUpdates = { tabs.indexOf(MainTab.Updates).takeIf { it >= 0 }?.let(mainPagerState::animateToPage) },
@@ -178,6 +201,12 @@ fun MainPage(
                         navigator.push(Route.RecommendedArticle(article.rId))
                     },
                     onOpenSearch = { navigator.push(Route.Search(null)) },
+                )
+
+                MainTab.Games -> GamesTab(
+                    viewModel = gamesViewModel,
+                    bottomPadding = bottomPadding,
+                    onOpenDetail = openDetail,
                 )
 
                 MainTab.Updates -> UpdatesTab(
@@ -197,7 +226,6 @@ fun MainPage(
                     onNavigateManualUpdate = { navigator.push(Route.ManualUpdate) },
                     onNavigateUpdateHistory = { navigator.push(Route.UpdateHistory) },
                     onNavigateSavedPackages = { navigator.push(Route.SavedPackages) },
-                    onNavigateDownloadingApps = { navigator.push(Route.DownloadingApps) },
                     onNavigateAbout = { navigator.push(Route.About) },
                     onNavigateTheme = { navigator.push(Route.ThemeSettings) },
                 )
@@ -357,6 +385,7 @@ private fun HomePage.toTab(): MainTab = when (this) {
 private val MainTab.icon
     get() = when (this) {
         MainTab.Recommended -> MiuixIcons.Create
+        MainTab.Games -> MiuixIcons.GridView
         MainTab.Updates -> MiuixIcons.Update
         MainTab.Settings -> MiuixIcons.Settings
     }
@@ -364,6 +393,7 @@ private val MainTab.icon
 private val MainTab.labelRes
     get() = when (this) {
         MainTab.Recommended -> Res.string.nav_recommended
+        MainTab.Games -> Res.string.nav_games
         MainTab.Updates -> Res.string.nav_updates
         MainTab.Settings -> Res.string.nav_settings
     }

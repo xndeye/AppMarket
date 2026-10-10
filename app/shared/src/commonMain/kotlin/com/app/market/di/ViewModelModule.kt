@@ -3,6 +3,7 @@ package com.app.market.di
 import com.app.market.viewmodel.AppDetailViewModel
 import com.app.market.viewmodel.DeviceProfileViewModel
 import com.app.market.viewmodel.DownloadingAppsViewModel
+import com.app.market.viewmodel.GamesViewModel
 import com.app.market.viewmodel.HistoricalVersionsViewModel
 import com.app.market.viewmodel.IgnoredAppsViewModel
 import com.app.market.viewmodel.InstallerSettingsViewModel
@@ -17,6 +18,7 @@ import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
 val viewModelModule = module {
+    viewModelOf(::GamesViewModel)
     viewModelOf(::UpdatesViewModel)
     viewModelOf(::ThemeSettingsViewModel)
     viewModelOf(::UpdateHistoryViewModel)
